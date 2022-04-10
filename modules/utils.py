@@ -38,5 +38,3 @@ def delete_list_indecies(list:Iterable, indecies:Iterable[int]) -> Iterable:
         del list[index]
     return list
 
-
-

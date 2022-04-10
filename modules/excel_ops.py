@@ -210,5 +210,3 @@ def save_to_excel(language_df:pd.DataFrame, filename:str, sheetname:str):
     dims = [0] * len(language_df.columns)
     # Save the dataframe to an excel file
     df_to_excel(language_df, filename, sheetname, styles, dims)
-    
-
