@@ -18,7 +18,7 @@ def guess_word(entry, direction='Forward'):
     else:
         query_keys = [x for x in query_keys if not '_f' in x]
     query, query_key = sample_entry(entry, query_keys)
-    if direction == 'Backward':
+    if direction == 'Backward' and target_key != '':
         query = query + ' (' + target_key.split('_')[-1] + ')'
     answer = input(query + ': ')
     answer = add_special_chars(answer)
@@ -32,13 +32,15 @@ def guess_word(entry, direction='Forward'):
         return False
 
 def matching(answer, target):
-    correct_answers = re.sub(r"[\(\[].*?[\)\]]", "", target)
-    correct_answers = re.split(',|;', correct_answers)
-    for idx, correct_answer in enumerate(correct_answers):
-        tmp = re.sub('\?|\.|!', '', correct_answer)
-        correct_answers[idx] = tmp.lower().strip()
-    answer = answer.lower()
-    answer = re.sub('\?|\.|!', '', answer).strip()
-    answer2 = re.sub('^the\s|^a\s', '', answer).strip()
+    def clean_text(text):
+        text = re.sub(r"[\(\[].*?[\)\]]", "", text)
+        text = text.replace('’', '\'')
+        return re.sub('\?|\.|!', '', text).strip().lower()
+    
+    correct_answers = re.split(',|;', clean_text(target))
+    # for idx, correct_answer in enumerate(correct_answers):
+    #     tmp = re.sub('\?|\.|!', '', correct_answer)
+    #     correct_answers[idx] = tmp.lower().strip()
+    answer = re.sub('^the\s|^a\s', '', clean_text(answer)).strip()
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
-    return any([fuzz.ratio(answer2, correct_answer) > 95 for correct_answer in correct_answers])
+    return any([fuzz.ratio(answer, correct_answer) > 95 for correct_answer in correct_answers])
