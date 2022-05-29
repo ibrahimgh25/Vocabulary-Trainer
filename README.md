@@ -19,4 +19,8 @@
  I started with implementing a GUI component to the tool which will help with concentration (compared to a cmd run program). But tbh GUI isn't my fortitude, and I don't have much time, so I was using the tool as is. For me, the tool "as-is" is still a vrey good way to recite and memorize vocabulary. That said, the more features added to the tool the better. So if anybody wants to help implement any of the open features it would be appreciated. If you you think any part of the code or how the database is stored please let me know. Also, in case you used the tool with a cutom database consider sharing it so people could benefit from it.
  
  ## Acknowledgements
-The tool was inspired by (LearnDW)[https://learngerman.dw.com/en/overview] which is a website for teaching german language. The database I collected is from there. They also have a tool to help you memorize vocabulary (it's really good but still neither tracks your scores nor focuses on stuff you don't know). 
+The tool was inspired by (LearnDW)[https://learngerman.dw.com/en/overview] which is a website for teaching german language. The database I collected is from there. They also have a tool to help you memorize vocabulary (it's really good but still neither tracks your scores nor focuses on stuff you don't know).
+
+## Documentation tasks
+- Add how to install and use the tool.
+- Add documentation for tool structure.
