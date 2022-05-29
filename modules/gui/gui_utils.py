@@ -18,14 +18,14 @@ class GUI(tk.Frame):
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.packed_buttons = 0
     
-    def create_button(self, controller, text, navigation_page, command = None, *args, **kwargs):
+    def create_button(self, controller, text, navigation_page, command = None, **kwargs):
         button = Button(self, text=text, width=30, bg='#84CEEB')
         if command:
-            button.configure(command=command)
+            button.configure(command=command, **kwargs)
         elif navigation_page != 'Exit':
-            button.configure(command=lambda: controller.show_frame(navigation_page))
+            button.configure(command=lambda: controller.show_frame(navigation_page), **kwargs)
         else:
-            button.configure(command=lambda: controller.Quit_application())
+            button.configure(command=lambda: controller.Quit_application(), **kwargs)
         return button
     
 class MenuBar(tk.Menu):

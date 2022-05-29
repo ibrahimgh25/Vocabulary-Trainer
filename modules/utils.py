@@ -1,21 +1,30 @@
-from typing import Iterable
-import numpy as np
 
-def normalize_weights(weights:Iterable) -> np.ndarray:
+import numpy as np
+import matplotlib.pyplot as plt
+
+from collections import Counter
+from typing import Iterable
+def normalize_weights(scores:Iterable) -> np.ndarray:
     """
-    Normalizes a list of weights.
+    Return a list of weights based on scores of the answers.
     """
-    weights = - np.array(weights)
-    # Will be changed later to an exponential decay function
-    weights = np.where(weights < 0, 0.3 - 1/weights, weights)
-    # Emphasis on new words and words that were answered incorrectly
-    weights = np.where(weights <= 0, weights + 2, weights)
+    weights = np.array(scores)
+    # Assign weights for the words that were answered incorrectly or not seen yet.
+    # The weights are proportional to the number of times the word was answered incorrectly.
+    weights = np.where(weights <= 0, weights - 3, weights)
+    # Assign weights for the words that were answered correctly before.
+    # The weights are inversely proportional to the number of times the word was answered correctly
+    weights = np.where(weights > 0, -2/weights, weights)
+    # Assign only small chance for the words that were answered correctly more than 10 times.
+    weights = np.where(weights > -2/10, -0.01, weights)
     return weights / np.sum(weights)
 
 def sample_entry(entry, keys):
     ''' Randomly selects a key from the list of keys and returns the value of the key and the key itself.'''
     keys = [x for x in keys if entry[x] != '']
     key = np.random.choice(keys)
+    if len(keys)==1:
+        return entry[key], ''
     return entry[key], key
 
 def add_special_chars(answer:str) -> str:
@@ -38,3 +47,22 @@ def delete_list_indecies(list:Iterable, indecies:Iterable[int]) -> Iterable:
         del list[index]
     return list
 
+def show_sampling_distribution(low_score=-10, high_score=10, n_samples=10000) -> None:
+    """
+    Plots the sampling disctribution given by normalize_weights.
+    """
+    # Make sure that low_score is smaller than high_score
+    if low_score > high_score:
+        low_score, high_score = high_score, low_score
+    
+    scores = np.arange(int(low_score), int(high_score), 1)
+    weights = normalize_weights(scores)
+    draws = np.random.choice(scores, size=n_samples, p=weights)
+    # Count how many times each score was picked
+    counts = Counter(draws)
+    
+    counts = [(x, y) for x, y in counts.items()]
+    counts.sort(key=lambda x: x[0])
+    # Plot the distribution
+    plt.plot(range(len(counts)), [x[1] for x in counts])
+    plt.show()

@@ -1,4 +1,16 @@
-from .translation_test import TranslationTesMenu, TranslationTestPage
-from .home import HomePage
+from .translation_test import (
+    TranslationTestMenu,
+    English2TargetTest,
+    Target2EnglishTest)
 
-ALL_PAGES = [TranslationTesMenu, HomePage, TranslationTestPage]
+from .home import HomePage
+from .settings_page import SettingsPage
+
+# Create a list with all the imported pages
+ALL_PAGES = [
+    HomePage,
+    TranslationTestMenu,
+    English2TargetTest,
+    Target2EnglishTest,
+    SettingsPage
+]
