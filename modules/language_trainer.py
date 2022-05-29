@@ -1,3 +1,4 @@
+import shutil, os, datetime
 import numpy as np
 
 from .trainer_utils import guess_word
@@ -50,3 +51,20 @@ class LanguageTrainer():
         categories = [x for x in categories if category in x]
         indices = self.lang_df[self.lang_df['Category'].isin(categories)].index
         return indices
+
+    def backup_database(self, excel_file, add_timestamp=True):
+        ''' Backup the database to a backup path '''
+        # Copy the database to a backup file
+        back_up_path = excel_file.replace('.xlsx', '_backup.xlsx')
+        file_name = os.path.basename(excel_file)
+
+        if add_timestamp:
+            # Add a stamp at the start of the file name
+            stamp = str(datetime.datetime.now()).replace(':', '-') + '_'            
+            back_up_path = os.path.join('backup', stamp + file_name)
+        else:
+            back_up_path = os.path.join('backup', file_name)
+        # Create the backup directory if it doesn't exist
+        if not os.path.exists('backup'):
+            os.mkdir('backup')
+        shutil.copy(excel_file, back_up_path)
