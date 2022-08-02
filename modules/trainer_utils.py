@@ -38,9 +38,24 @@ def matching(answer, target):
         return re.sub('\?|\.|!', '', text).strip().lower()
     
     correct_answers = re.split(',|;', clean_text(target))
-    # for idx, correct_answer in enumerate(correct_answers):
-    #     tmp = re.sub('\?|\.|!', '', correct_answer)
-    #     correct_answers[idx] = tmp.lower().strip()
+    for value in [adjust_for_slash(x) for x in correct_answers]:
+        correct_answers += value
+
     answer = re.sub('^the\s|^a\s', '', clean_text(answer)).strip()
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
-    return any([fuzz.ratio(answer, correct_answer) > 95 for correct_answer in correct_answers])
+    return any([fuzz.ratio(answer, correct_answer.strip()) > 95 for correct_answer in correct_answers])
+
+def adjust_for_slash(sentences:str, choices=[]):
+    if isinstance(sentences, str):
+        sentences = [sentences]
+        words_with_slash = re.findall(r'[^ ]+/[^ ]+', sentences[0])    
+        choices = [(x, x.split('/')) for x in words_with_slash]
+    if len(choices) == 0:
+        return sentences
+    choice = choices[0]
+    choices.remove(choice)
+    tmp = sentences
+    sentences = []
+    for sent in tmp:
+        sentences += [sent.replace(choice[0], x, 1) for x in choice[1]]
+    return adjust_for_slash(sentences, choices)
