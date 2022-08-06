@@ -1,3 +1,4 @@
+import warnings
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -66,3 +67,16 @@ def show_sampling_distribution(low_score=-10, high_score=10, n_samples=10000) ->
     # Plot the distribution
     plt.plot(range(len(counts)), [x[1] for x in counts])
     plt.show()
+
+def generate_id(digits, existing_ids):
+    # If not enough ids are available throw and error
+    if len(existing_ids) > (10**digits)/2:
+        raise Exception('generate_id: the number of ids to be generated can\'t be covered by the specified number of digits')
+    # For simpliciy the implementation is faster when the number of available ids is much larger than the number to be assigned
+    if len(existing_ids) > (10**digits)/100:
+        warnings.warn('generate_id: the number of ids to be generated is close to the number of available ids, for better efficiency increase the number of digits')
+    # We have the proper gaurds above to not worry about an open loop
+    while(True):
+        id = int(10**digits * np.random.rand())
+        if id not in existing_ids:
+            return id
