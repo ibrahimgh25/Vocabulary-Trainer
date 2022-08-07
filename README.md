@@ -1,4 +1,4 @@
-# Foreign Language Vocabulary Trainer
+# Vocabulary Trainer
  In the process of learning a new language, I couldn't find a free tool for testing what words I memerized. I also looked through multiple open-source python projects on github (example: ), although they were great, they didn't do what I wanted. So I built this code. 
  ## Offered Features
  The tool has the following feature:
