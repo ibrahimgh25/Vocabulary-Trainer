@@ -22,7 +22,9 @@ The tool was inspired by [LearnDW](https://learngerman.dw.com/en/overview) which
 
 ## Documentation tasks
 - Add how to install and use the tool.
-- Add documentation for tool structure.
+- Add documentation for the tool structure.
+- Add some screenshots for the tool
+- Add instructions for building the database
 
 ## Bugs
 - Fix a bug where an excel sheet changes it's relative order when the database is updated (easy to fix, I will get to it later)
