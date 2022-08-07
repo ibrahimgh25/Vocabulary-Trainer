@@ -4,32 +4,6 @@ import re
 from fuzzywuzzy import fuzz
 from .utils import sample_entry, add_special_chars
 
-def guess_word(entry, direction='Forward'):
-    target_keys = ['Translation', 'Translation_f']
-    query_keys = ['Word_s', 'Word_p', 'Word_fs', 'Word_fp']
-    if direction == 'Backward':
-        target_keys, query_keys = query_keys, target_keys
-    elif not direction=='Forward':
-        raise ValueError('Direction must be "Forward" or "Backward"')
-    
-    target, target_key = sample_entry(entry, target_keys)
-    if '_f' in target_key:
-        query_keys = [x for x in query_keys if '_f' in x]
-    else:
-        query_keys = [x for x in query_keys if not '_f' in x]
-    query, query_key = sample_entry(entry, query_keys)
-    if direction == 'Backward' and target_key != '':
-        query = query + ' (' + target_key.split('_')[-1] + ')'
-    answer = input(query + ': ')
-    answer = add_special_chars(answer)
-    if matching(answer, target):
-        print(target)
-        return True
-    elif answer == 'exit()':
-        return None
-    else:
-        print('Wrong answer, the right answer is: ', target)
-        return False
 
 def matching(answer, target):
     def clean_text(text):
