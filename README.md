@@ -19,6 +19,7 @@
  
  ## Acknowledgements
 The tool was inspired by [LearnDW](https://learngerman.dw.com/en/overview) which is a website for teaching german language. The database I collected is from there. They also have a tool to help you memorize vocabulary (it's really good but still neither tracks your scores nor focuses on stuff you don't know).
+Also, I haven't done a GUI interface before, so I got started by learning from the code in ["codecravings/Speed-Typing-Test-Python"](https://github.com/codecravings/Speed-Typing-Test-Python).
 
 ## Documentation tasks
 - Add how to install and use the tool.
