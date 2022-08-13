@@ -4,7 +4,7 @@
  The tool has the following feature:
  - A console interface for reciting vocabulary from an excel database in two ways (language you know to language you're learning and vice-versa).
  - A question sampling method that focuses on questions you're answering wrong.
- - A way to store scores over multiple sessions (for now they're stored as rows in the excel sheet)
+ - A way to store scores over multiple sessions (scores for an exercise are stored as json files with ID linking to the database)
  
  ## Possible Additions
  - Adding settings to the GUI that allow for custimizing several parameters.
@@ -12,6 +12,8 @@
  - A custimaizable sampling strategy for choosing the questions.
  - Verb cojugations (this have some challenges, mainly seeing a good way for collecting and storing different verbs with their conjugation)
  - A way to update some entries while the program is running (for exmaple, when you're asked about a translation for a phrase, you notice a problem with the answer in the excel sheet and need to quickly solve it, this makes more sense when a GUI is implemented)
+ - A way to summarize and visualize results for certain exercises
+ - Fix some issues with the matching function (when evaluating answers)
  
  ## Collaboration Plea
  For me, the tool "as-is" is still a vrey good way to recite and memorize vocabulary. That said, the more features added to the tool the better. So if anybody wants to help implement any of the open features it would be appreciated. Also, in case you used the tool with a cutom database consider sharing it so people could benefit from it.
