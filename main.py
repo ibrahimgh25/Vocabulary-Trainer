@@ -1,8 +1,8 @@
-from modules import LanguageTrainer
+from modules.main_application import TrainerApp
 
 if __name__=='__main__':
     excel_file = 'resources/german_database.xlsx'
     sheet_name = 'A1'
     gui_resource_dir = 'resources/gui'
-    trainer = LanguageTrainer(excel_file, sheet_name, gui_resource_dir)
-    trainer.main_loop()
+    app = TrainerApp(gui_resource_dir)
+    app.main_loop()

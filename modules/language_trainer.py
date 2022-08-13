@@ -5,22 +5,24 @@ import numpy as np
 from .utils import normalize_weights, generate_id, sample_entry, add_special_chars
 from .excel_ops import get_excel_df, save_to_excel
 from .trainer_utils import matching
-from .pygame_interface import TrainerInterface
 
 class LanguageTrainer():
-    def __init__(self, excel_file, sheet_name, gui_resource_dir):
+    def __init__(self, excel_file, sheet_name):
         self.load_df(excel_file, sheet_name)
         # define a private attribute to store the direction
         # of the training session
-        self.__direction = 'Backward'
+        
         if not os.path.exists('resources/scores'):
             os.mkdir('resources/scores')
-        self.app = TrainerInterface(gui_resource_dir)
-    
-    def load_df(self, excel_file, sheet_name):
-        self.loaded_sheet = sheet_name
-        self.loaded_file = excel_file
+        # Load the scores
+        self.scores = {}
+        self.scores['Forward Translate'] = self.load_scores('translate', sheet_name, 'Forward')
+        self.scores['Backward Translate'] = self.load_scores('translate', sheet_name, 'Backward')
 
+        # Define the avialable for IDs
+        self.loaded_ids = self.lang_df['ID'].values
+
+    def load_df(self, excel_file, sheet_name):
         self.lang_df = get_excel_df(excel_file, sheet_name)
         # Take care of the ID column
         if not 'ID' in self.lang_df.columns:
@@ -31,33 +33,31 @@ class LanguageTrainer():
             if word_id=='' or word_id < 10**(id_digits-1):
                 self.lang_df.loc[self.lang_df.index==idx, 'ID'] = generate_id(id_digits, self.lang_df['ID'])
     
-    def translation_session(self, category=''):
-        ''' Do a training session '''
-        # group accordign to category
-        indices = self.get_matching_indices(category)
-        scores = self.load_scores('translate', self.loaded_sheet, self.__direction)
-        while(True):
-            draw = np.random.choice(indices, p=normalize_weights(list(scores.values())))
-            entry = self.lang_df.loc[draw].to_dict()
-            result, target = self.guess_word(entry)
-            id = str(self.lang_df.loc[draw, 'ID'])
-            exit = self.app.display_question_results(target, result)
-            if result:
-                scores[id] += 1
-                # set the row to a zero if it's still negative
-                scores[id] = max(0, scores[id])
-            elif result == False:
-                scores[id] -= 1
-            else:
-                # if the result is None, the test ends
-                # We should save the new scores
-                self.save_scores(scores, 'translate', self.loaded_sheet, self.__direction)
-                break
-            if exit == 0:
-                self.save_scores(scores, 'translate', self.loaded_sheet, self.__direction)
-                break
-        print('Session finished.')
+    def evaluate_answer(self, entry, answer, exercise):
+        answer = add_special_chars(answer)
+        target = entry['target']
+        result = matching(answer, target)
+
+        id = str(entry['ID'])
+        if result:
+            self.scores[exercise]['scores'][id] += 1
+            # set the row to a zero if it's still negative
+            self.scores[exercise]['scores'][id] = max(0, self.scores[exercise]['scores'][id])
+        elif result == False:
+            self.scores[exercise]['scores'][id] -= 1
+        return result
+            
     
+    def sample_question(self, exercise):
+        # I know below is a lot of text, but bare with me
+        weights = list(self.scores[exercise]['scores'].values())
+        draw = np.random.choice(self.loaded_ids, p=normalize_weights(weights))
+        idx = np.where(self.loaded_ids==draw)[0][0]
+        entry = self.lang_df.loc[idx].to_dict()
+        # RENAME THIS
+        query, target = self.guess_word(entry, exercise.split()[0])
+        return {'question':query, 'ID':entry['ID'], 'target':target}
+
     def load_scores(self, *args):
         ''' Load the scores for a particular task'''
         score_path = 'resources/scores/' + '_'.join([*args]) + '.json'
@@ -65,18 +65,22 @@ class LanguageTrainer():
             scores = json.load(open(score_path, 'r'))
         except:
             scores = {}
-            print(score_path)
+        
         # Fill in for the new IDs that still have no entry in the score
         for id in self.lang_df['ID']:
             if not str(id) in scores.keys():
                 scores[id] = 0
-        return scores
+        return {'scores':scores, 'path':score_path}
     
     def save_scores(self, scores, *args):
         ''' Save the scores for a particular task'''
         score_path = 'resources/scores/' + '_'.join([*args]) + '.json'
         json.dump(scores, open(score_path, 'w'))
 
+    def save_all_scores(self):
+        for score in self.scores.values():
+            json.dump(score, open(score['path'], 'w'))
+    
     def set_direction(self, direction):
         ''' Set the direction of the training session '''
         assert direction in ['Forward', 'Backward'], 'Direction must be "Forward" or "Backward"'
@@ -111,24 +115,13 @@ class LanguageTrainer():
             os.mkdir('backup')
         shutil.copy(excel_file, back_up_path)
     
-    def main_loop(self):
-        option = self.app.start()
-        if option == 'Translate English to Target':
-            self.__direction = 'Backward'
-            self.translation_session()
-        elif option == 'Translate Target to English':
-            self.__direction = 'Forward'
-            self.translation_session()
-        else:
-            print('Wrong choice!')
-        self.save_database(self.loaded_file, self.loaded_sheet)
     
-    def guess_word(self, entry):
+    def guess_word(self, entry, direction):
         target_keys = ['Translation', 'Translation_f']
         query_keys = ['Word_s', 'Word_p', 'Word_fs', 'Word_fp']
-        if self.__direction == 'Backward':
+        if direction == 'Backward':
             target_keys, query_keys = query_keys, target_keys
-        elif not self.__direction=='Forward':
+        elif not direction=='Forward':
             raise ValueError('Direction must be "Forward" or "Backward"')
         
         target, target_key = sample_entry(entry, target_keys)
@@ -137,13 +130,6 @@ class LanguageTrainer():
         else:
             query_keys = [x for x in query_keys if not '_f' in x]
         query, query_key = sample_entry(entry, query_keys)
-        if self.__direction == 'Backward' and target_key != '':
+        if direction == 'Backward' and target_key != '':
             query = query + ' (' + target_key.split('_')[-1] + ')'
-        answer = self.app.get_answer(query)
-        answer = add_special_chars(answer)
-        if matching(answer, target):
-            return True, target
-        elif answer == 'exit()':
-            return None, target
-        else:
-            return False, target
+        return query, target

@@ -1,33 +1,57 @@
-from turtle import bgcolor
 import pygame
-
+import json, os
 import time
+import sys
 
-    
-class TrainerInterface:
+from .language_trainer import LanguageTrainer
+
+class TrainerApp:
    
     def __init__(self, resource_dir):
-        self.size = (750, 500)
-        self.w, self.h = self.size
+        self.resource_dir = resource_dir
+        self.stg = self._get_settings()
 
-        self.head_color = (255,213,102)
-        self.text_color = (240,240,240)
+        self.resource_dir = resource_dir
+        self.question_handler = LanguageTrainer(self.stg['Database'], self.stg['Excel Sheet'])
 
         self.status = 'reset'
         self.user_answer = ''
         
-       
+        img_size = self.stg['Screen Resolution']
         pygame.init()
         self.open_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
-        self.open_img = pygame.transform.scale(self.open_img, self.size)
+        self.open_img = pygame.transform.scale(self.open_img, img_size)
 
 
         self.bg = pygame.image.load(f'{resource_dir}/background.jpg')
-        self.bg = pygame.transform.scale(self.bg, self.size)
+        self.bg = pygame.transform.scale(self.bg, img_size)
 
-        self.screen = pygame.display.set_mode(self.size)
+        self.screen = pygame.display.set_mode(img_size)
         pygame.display.set_caption('Vocabulary Trainer')
-          
+
+    def _get_settings(self):
+        settings_path = f'{self.resource_dir}/settings.json'
+        if not os.path.exists(settings_path):
+            self.restore_default_settings()
+        with open(settings_path, 'r') as f:
+            settings = json.load(f)
+        return settings
+    
+    def _save_settings(self, settings):
+        with open(f'{self.resource_dir}/settings.json', 'w') as f:
+            json.dump(settings, f)
+
+    def restore_default_settings(self):
+        settings = {
+            'Screen Resolution':(750, 500),
+            'Head Color':(255, 324, 102),
+            'Text Color':(240, 240, 240),
+            'Database':'resources/german_database.xlsx',
+            'Excel Sheet':'A1'
+        }
+        self._save_settings(settings)
+        
+
     def draw_text(self, msg, y , rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         self.screen.fill(bgcolor, rect)
         pygame.draw.rect(self.screen, bgcolor, rect, 2)
@@ -40,11 +64,12 @@ class TrainerInterface:
         pygame.display.update()   
     
     def add_options(self, options):
-        current_y = int(0.29*self.h) # Start from y 29% from total height
-        start_x = int(0.05*self.w) # Start from x 5% from total width
-        width = int(0.35*self.w) # Width of 35%
-        height = int(0.1*self.h)
-        gap = int(0.016*self.h) # Distance between two options
+        w, h = self.stg['Screen Resolution']
+        current_y = int(0.29*h) # Start from y 29% from total height
+        start_x = int(0.05*w) # Start from x 5% from total width
+        width = int(0.35*w) # Width of 35%
+        height = int(0.1*h)
+        gap = int(0.016*h) # Distance between two options
         fsize = height//2
         output = []
         fcolor = (19, 161, 14)
@@ -54,7 +79,7 @@ class TrainerInterface:
             self.draw_text(option, y=current_y+fsize/4, rect=output[-1][1], fsize=fsize, fgcolor=fcolor, bgcolor=bgcolor)
             current_y += gap + height
         return output
-        
+     
     def start(self):
         self.reset_screen(self.open_img)
         self.status = 'idle'
@@ -69,13 +94,12 @@ class TrainerInterface:
         while(True):
             event = pygame.event.wait()
             if event.type == pygame.QUIT:
-                self.status = 'dead'
-                pygame.quit()
-                return
+                self.quit()
             elif event.type == pygame.MOUSEBUTTONUP:
                 matching_area = self.get_matching_area(options)
-                if matching_area not in ['Settings', 'Exit']:
+                if matching_area is not None:
                     return matching_area
+            
      
     def get_matching_area(self, options):
         x, y = pygame.mouse.get_pos()
@@ -128,8 +152,8 @@ class TrainerInterface:
             event = pygame.event.wait()
             if event.type == pygame.QUIT:
                 self.status = 'dead'
-                pygame.quit()
-                return 0
+                self.quit()
+                return
             elif event.type == pygame.KEYDOWN and event.key in [pygame.K_SPACE, pygame.K_RETURN] :
                 return 1
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -138,3 +162,31 @@ class TrainerInterface:
     def reset_screen(self, image):
         self.screen.blit(image, (0,0))
         pygame.display.update()
+    
+    def quit(self):
+        self.question_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+        self.question_handler.save_all_scores()
+        pygame.quit()
+        sys.exit()
+    
+    def main_loop(self):
+        while(True):
+            option = self.start()
+            if option.startswith('Translate'):
+                while(True):
+                    if option == 'Translate Target to English':
+                        exercise = 'Forward Translate'
+                    else:
+                        exercise = 'Backword Translate'
+                    entry = self.question_handler.sample_question(exercise=exercise)
+                    answer = self.get_answer(entry['question'])
+                    result = self.question_handler.evaluate_answer(entry, answer, exercise)
+                    value = self.display_question_results(entry['target'], result)
+                    if value == 0:
+                        break
+            
+            elif option == 'Settings':
+                print('Wrong Choice')
+            elif option == 'Exit':
+                self.quit()
+            
