@@ -1,1 +1,1 @@
-from .language_trainer import LanguageTrainer
+from .main_application import TrainerApp

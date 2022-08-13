@@ -1,18 +1,22 @@
+from optparse import Option
+from typing import Iterable, Tuple
 import pygame
 import json, os
 import time
 import sys
 
-from .language_trainer import LanguageTrainer
+from .question_handler import QuestionHandler
 
 class TrainerApp:
+    """ This class contains the main application that will handle the front-end, it will also control the back-end
+         class (QuestionHandler)"""
    
-    def __init__(self, resource_dir):
+    def __init__(self, resource_dir:str):
         self.resource_dir = resource_dir
         self.stg = self._get_settings()
 
         self.resource_dir = resource_dir
-        self.question_handler = LanguageTrainer(self.stg['Database'], self.stg['Excel Sheet'])
+        self.question_handler = QuestionHandler(self.stg['Database'], self.stg['Excel Sheet'])
 
         self.status = 'reset'
         self.user_answer = ''
@@ -30,6 +34,7 @@ class TrainerApp:
         pygame.display.set_caption('Vocabulary Trainer')
 
     def _get_settings(self):
+        """ Returns the settings of the application. If no settings file are found it creates and loads the default settings"""
         settings_path = f'{self.resource_dir}/settings.json'
         if not os.path.exists(settings_path):
             self.restore_default_settings()
@@ -38,10 +43,16 @@ class TrainerApp:
         return settings
     
     def _save_settings(self, settings):
+        """
+        Saves the settings to the appropriate files (can be used when the settings are changed by the user)
+        :param settings: a dictionary containing the settings of the application
+
+        """
         with open(f'{self.resource_dir}/settings.json', 'w') as f:
             json.dump(settings, f)
 
     def restore_default_settings(self):
+        """ Restore all the settings to the default value"""
         settings = {
             'Screen Resolution':(750, 500),
             'Head Color':(255, 324, 102),
@@ -52,7 +63,16 @@ class TrainerApp:
         self._save_settings(settings)
         
 
-    def draw_text(self, msg, y , rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
+    def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
+        """
+        Draws a rectangle and displays text in it on the active screen
+        :param msg: the text to be displayed
+        :param rect: the position of the drawn rectangle with the format (x, y, w, h)
+        :param fgcolor:  the text RGB color (Default value = (255, 255, 255))
+        :param fsize:  the text size (Default value = 26)
+        :param bgcolor:  the rectangle RGB color (Default value = (0, 0, 0)
+        Note: the function aligns the text with the center of the drawn rectangle
+        """
         self.screen.fill(bgcolor, rect)
         pygame.draw.rect(self.screen, bgcolor, rect, 2)
         
@@ -63,7 +83,12 @@ class TrainerApp:
         self.screen.blit(text, text_rect)
         pygame.display.update()   
     
-    def add_options(self, options):
+    def add_options(self, options:Iterable(str))->tuple:
+        """
+        Add a list of options to a screen
+        :param options: a list of strings containing the name of the options
+        :returns: a list of tuple with each element as follows (option_name, option_rect)
+        """
         w, h = self.stg['Screen Resolution']
         current_y = int(0.29*h) # Start from y 29% from total height
         start_x = int(0.05*w) # Start from x 5% from total width
@@ -81,6 +106,9 @@ class TrainerApp:
         return output
      
     def start(self):
+        """ This function displays the main menu until the user chooses a valid option
+            :returns: the name of the pressed option
+        """
         self.reset_screen(self.open_img)
         self.status = 'idle'
         pygame.display.update()
@@ -101,7 +129,12 @@ class TrainerApp:
                     return matching_area
             
      
-    def get_matching_area(self, options):
+    def get_matching_area(self, options:Iterable(Tuple)):
+        """
+        calculates which option a mouse click matches
+        :param options: a list of tuples representing all the options in the page, has the form [(option_name, option_rect), ...]
+        :returns: name of the matched option, if no option was matched it returns ''
+        """
         x, y = pygame.mouse.get_pos()
         for option in options:
             rect = option[1]
@@ -111,7 +144,11 @@ class TrainerApp:
                 return option[0]
         return ''
         
-    def get_answer(self, question):
+    def get_answer(self, question:str):
+        """
+        Displays a question on the screen and saves the answer provided by the user in self.user_answer
+        :param question: the string containing the question
+        """
         self.status = 'active'
         self.user_answer = ''
         self.reset_screen(self.bg)
@@ -139,7 +176,13 @@ class TrainerApp:
                                 pass
                        
 
-    def display_question_results(self, correct_answer, answered_correctly):
+    def display_question_results(self, correct_answer:str, answered_correctly:bool)->Optional[int]:
+        """
+        Displays the results for a question on the screen
+        :param correct_answer: the correct answer to the question, diplayed below the answer given by the user
+        :param answered_correctly: whether the user answered the question correctly
+        :returns: 0 if the escape key was pressed, 1 if "enter" or "space' where pressed
+        """
         if answered_correctly:
             bgcolor = (0, 0, 255)
         else:
@@ -153,23 +196,29 @@ class TrainerApp:
             if event.type == pygame.QUIT:
                 self.status = 'dead'
                 self.quit()
-                return
             elif event.type == pygame.KEYDOWN and event.key in [pygame.K_SPACE, pygame.K_RETURN] :
                 return 1
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return 0
     
     def reset_screen(self, image):
+        """
+        Resets a given screen by displaying a new background image
+        :param image: the image to display
+
+        """
         self.screen.blit(image, (0,0))
         pygame.display.update()
     
     def quit(self):
+        """ Performs the necessary actions before the application exits"""
         self.question_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
         self.question_handler.save_all_scores()
         pygame.quit()
         sys.exit()
     
     def main_loop(self):
+        """ The main loop of the application"""
         while(True):
             option = self.start()
             if option.startswith('Translate'):
