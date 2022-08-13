@@ -109,7 +109,7 @@ class QuestionHandler():
     def save_all_scores(self) -> None:
         """ Saves all the scores to their respective files"""
         for score in self.scores.values():
-            json.dump(score, open(score['path'], 'w'))
+            json.dump(score['scores'], open(score['path'], 'w'))
     
     
 

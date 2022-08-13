@@ -154,9 +154,9 @@ def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[d
         existing_sheets = wb.sheetnames
         if sheet_name in existing_sheets:
             # Make sure to create the function at the same index
-            idx = wb.worksheets.index(wb['sheet_name'])
+            idx = wb.worksheets.index(wb[sheet_name])
             wb.remove(wb[sheet_name])
-            ws = wb.create_sheet(title=sheet_name, indx=idx)
+            ws = wb.create_sheet(title=sheet_name, index=idx)
         else:
             ws = wb.create_sheet(title=sheet_name)
     # If the file doesn't exist, create a new workbook

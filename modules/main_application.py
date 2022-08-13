@@ -1,5 +1,5 @@
 from optparse import Option
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Optional
 import pygame
 import json, os
 import time
@@ -23,8 +23,8 @@ class TrainerApp:
         
         img_size = self.stg['Screen Resolution']
         pygame.init()
-        self.open_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
-        self.open_img = pygame.transform.scale(self.open_img, img_size)
+        self.home_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
+        self.home_img = pygame.transform.scale(self.home_img, img_size)
 
 
         self.bg = pygame.image.load(f'{resource_dir}/background.jpg')
@@ -83,42 +83,68 @@ class TrainerApp:
         self.screen.blit(text, text_rect)
         pygame.display.update()   
     
-    def add_options(self, options:Iterable(str))->tuple:
+    def add_options(self, options:Iterable[str], dimensions:dict)->tuple:
         """
         Add a list of options to a screen
         :param options: a list of strings containing the name of the options
+        :params dimensions: dictionary contining the rel (in %) dimensions of the options
+         it should contain the following keys: 
+         - rel_y: the starting y relative to the height
+         - rel_x: the starting x relative to the width
+         - rel_w and rel_h: relative heights and widths of each options
+         - rel_gap: the gap between two options
         :returns: a list of tuple with each element as follows (option_name, option_rect)
         """
         w, h = self.stg['Screen Resolution']
-        current_y = int(0.29*h) # Start from y 29% from total height
-        start_x = int(0.05*w) # Start from x 5% from total width
-        width = int(0.35*w) # Width of 35%
-        height = int(0.1*h)
-        gap = int(0.016*h) # Distance between two options
+        # Divide by 100 each dimension
+        dimensions = {x:y/100 for x, y in dimensions.items()}
+        current_y = int(dimensions['rel_y']*h)
+        start_x = int(dimensions['rel_x']*w)
+        width, height = int(dimensions['rel_w']*w), int(dimensions['rel_h']*h)
+        gap = int(dimensions['rel_gap']*h) # Distance between two options
         fsize = height//2
         output = []
         fcolor = (19, 161, 14)
         bgcolor = (255, 255, 255, 0)
         for option in options:
             output.append((option, (start_x, current_y, width, height)))
-            self.draw_text(option, y=current_y+fsize/4, rect=output[-1][1], fsize=fsize, fgcolor=fcolor, bgcolor=bgcolor)
+            self.draw_text(option, rect=output[-1][1], fsize=fsize, fgcolor=fcolor, bgcolor=bgcolor)
             current_y += gap + height
         return output
+    
      
     def start(self):
         """ This function displays the main menu until the user chooses a valid option
             :returns: the name of the pressed option
         """
-        self.reset_screen(self.open_img)
+        self.reset_screen(self.home_img)
         self.status = 'idle'
         pygame.display.update()
         
-        options = ['Translate English to Target',
-                    'Translate Target to English',
+        options = ['Practice',
+                    'Show Scores',
                     'Settings',
                     'Exit'
                     ]
-        options = self.add_options(options)
+        dimensions = {'rel_y':29, 'rel_x':5, 'rel_w':35, 'rel_h':10, 'rel_gap':1.6}
+
+        options = self.add_options(options, dimensions)
+        return self.get_user_option(options)
+
+    def choose_exercise(self):
+        ''' Choose an exercise to either display its score or practice it'''
+        self.reset_screen(self.home_img)
+        options = ['Translate English to Target',
+                    'Translate Target to English',
+                    'Back'
+                    ]
+        dimensions = {'rel_y':29, 'rel_x':5, 'rel_w':35, 'rel_h':10, 'rel_gap':1.6}
+        options = self.add_options(options, dimensions)
+        return self.get_user_option(options)
+        
+    
+    def get_user_option(self, options):
+        ''' Returns what option the user chooses on a given screen'''
         while(True):
             event = pygame.event.wait()
             if event.type == pygame.QUIT:
@@ -127,9 +153,8 @@ class TrainerApp:
                 matching_area = self.get_matching_area(options)
                 if matching_area is not None:
                     return matching_area
-            
-     
-    def get_matching_area(self, options:Iterable(Tuple)):
+
+    def get_matching_area(self, options:Iterable[Tuple]):
         """
         calculates which option a mouse click matches
         :param options: a list of tuples representing all the options in the page, has the form [(option_name, option_rect), ...]
@@ -153,11 +178,11 @@ class TrainerApp:
         self.user_answer = ''
         self.reset_screen(self.bg)
         # draw the question
-        self.draw_text(question, y=200, rect=(50,180,650,50), bgcolor=(237,125,49))
+        self.draw_text(question, rect=(50,180,650,50), bgcolor=(237,125,49))
         while self.status == 'active':
     
             # update the text of user input
-            self.draw_text(self.user_answer, y=274, rect=(50,250,650,50), bgcolor=(237,125,49))
+            self.draw_text(self.user_answer, rect=(50,250,650,50), bgcolor=(237,125,49))
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -189,7 +214,7 @@ class TrainerApp:
             bgcolor = (255, 0, 0)
 
         # update the text of user input
-        self.draw_text(correct_answer, y=360 ,rect=(50, 340, 650, 50), bgcolor=bgcolor)
+        self.draw_text(correct_answer, rect=(50, 340, 650, 50), bgcolor=bgcolor)
 
         while(True):
             event = pygame.event.wait()
@@ -221,18 +246,26 @@ class TrainerApp:
         """ The main loop of the application"""
         while(True):
             option = self.start()
-            if option.startswith('Translate'):
-                while(True):
+            if option == 'Practice':
+                option = self.choose_exercise()
+                while(True):                    
                     if option == 'Translate Target to English':
                         exercise = 'Forward Translate'
+                    elif option == 'Translate English to Target':
+                        exercise = 'Backward Translate'
                     else:
-                        exercise = 'Backword Translate'
+                        break
                     entry = self.question_handler.sample_question(exercise=exercise)
                     answer = self.get_answer(entry['question'])
                     result = self.question_handler.evaluate_answer(entry, answer, exercise)
                     value = self.display_question_results(entry['target'], result)
                     if value == 0:
                         break
+            elif option == 'Show Scores':
+                exercise = self.choose_exercise()
+                print(exercise)
+                if exercise == 'Back':
+                    continue
             
             elif option == 'Settings':
                 print('Wrong Choice')
