@@ -6,12 +6,11 @@
  - A question sampling method that focuses on questions you're answering wrong.
  - A way to store scores over multiple sessions (for now they're stored as rows in the excel sheet)
  
- ## Possible Editions
+ ## Possible Additions
  - Adding settings to the GUI that allow for custimizing several parameters.
  - Several exercises for nouns (female-to-male, singular-to-plural)
  - A custimaizable sampling strategy for choosing the questions.
  - Verb cojugations (this have some challenges, mainly seeing a good way for collecting and storing different verbs with their conjugation)
- - A more flexible way for matching the answers.
  - A way to update some entries while the program is running (for exmaple, when you're asked about a translation for a phrase, you notice a problem with the answer in the excel sheet and need to quickly solve it, this makes more sense when a GUI is implemented)
  
  ## Collaboration Plea
@@ -26,6 +25,3 @@ Also, I haven't done a GUI interface before, so I got started by learning from t
 - Add documentation for the tool structure.
 - Add some screenshots for the tool
 - Add instructions for building the database
-
-## Bugs
-- Fix a bug where an excel sheet changes it's relative order when the database is updated (easy to fix, I will get to it later)
