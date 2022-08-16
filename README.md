@@ -2,7 +2,7 @@
  In the process of learning a new language, I couldn't find a free tool for testing what words I memerized. I also looked through multiple open-source python projects on github (example: ), although they were great, they didn't do what I wanted. So I built this code. 
  ## Offered Features
  The tool has the following feature:
- - A console interface for reciting vocabulary from an excel database in two ways (language you know to language you're learning and vice-versa).
+ - A graphical interface for reciting vocabulary from an excel database in two ways (language you know to language you're learning and vice-versa).
  - A question sampling method that focuses on questions you're answering wrong.
  - A way to store scores over multiple sessions (scores for an exercise are stored as json files with ID linking to the database)
  
