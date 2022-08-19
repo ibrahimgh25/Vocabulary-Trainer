@@ -1,5 +1,6 @@
 import shutil, os, datetime
-import json
+import json, warnings
+
 from typing import Iterable, Tuple
 import numpy as np
 
@@ -17,15 +18,15 @@ class QuestionHandler():
         # define a private attribute to store the direction
         # of the training session
         
+        # Define the avialable for IDs
+        self.loaded_ids = self.lang_df['ID'].values
+
         if not os.path.exists('resources/scores'):
             os.mkdir('resources/scores')
         # Load the scores
         self.scores = {}
         self.scores['Forward Translate'] = self.load_scores('translate', sheet_name, 'Forward')
         self.scores['Backward Translate'] = self.load_scores('translate', sheet_name, 'Backward')
-
-        # Define the avialable for IDs
-        self.loaded_ids = self.lang_df['ID'].values
 
     def load_df(self, excel_file:str, sheet_name:str) -> None:
         """
@@ -101,9 +102,14 @@ class QuestionHandler():
             scores = {}
         
         # Fill in for the new IDs that still have no entry in the score
-        for id in self.lang_df['ID']:
+        for id in self.loaded_ids:
             if not str(id) in scores.keys():
                 scores[id] = 0
+        # Remove scores for words that have been deleted manually by the user
+        for id in list(scores.keys()):
+            if int(id) not in self.loaded_ids:
+                scores.pop(id)
+                print(f'Removed ID {id}')
         return {'scores':scores, 'path':score_path}
 
     def save_all_scores(self) -> None:
@@ -178,3 +184,33 @@ class QuestionHandler():
         if direction == 'Backward' and target_key != '':
             query = query + ' (' + target_key.split('_')[-1] + ')'
         return query, target
+    
+    def add_alternative_translation(self, id, translation, direction):
+        idx = np.where(self.loaded_ids==id)[0][0]
+        assert direction in ['Forward', 'Backward']
+        column = f'Alternative {direction}'
+        if ';' in translation or ',' in translation:
+            warnings.warn(f'{translation} contains an invalid character, ingoring the command')
+            return False
+        # If there's already an alternative translation separate the new entry with a ';'
+        if self.lang_df[column].values[idx] != '':
+            self.lang_df.loc[self.lang_df.index==idx, column] += ';' + translation
+        else:
+            self.lang_df.loc[self.lang_df.index==idx, column] = translation
+        return True
+    
+    def delete_entry(self, idx):
+        for exercise in self.scores.keys():
+            self.scores[exercise]['scores'].pop(str(idx))
+        
+        idx = np.where(self.loaded_ids==idx)[0][0]
+        self.lang_df.drop(int(idx), axis=0, inplace=True)
+
+        self.loaded_ids = self.lang_df['ID'].values
+        
+    def set_translation_target(self, idx, old_target, new_target):
+        idx = np.where(self.loaded_ids==idx)[0][0]
+        entry = self.lang_df.loc[idx].to_dict()
+        for key, value in entry.items():
+            if value == old_target:
+                self.lang_df.loc[self.lang_df.index==idx, key] = new_target
