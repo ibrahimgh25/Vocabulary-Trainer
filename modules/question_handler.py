@@ -33,7 +33,6 @@ class QuestionHandler():
         Loads the dataframe contianing the vocabulary to be used
         :param excel_file: the path to the excel file
         :param sheet_name: the name of the sheet containing the data
-
         """
         self.lang_df = get_excel_df(excel_file, sheet_name)
         # Take care of the ID column
@@ -104,12 +103,11 @@ class QuestionHandler():
         # Fill in for the new IDs that still have no entry in the score
         for id in self.loaded_ids:
             if not str(id) in scores.keys():
-                scores[id] = 0
+                scores[str(id)] = 0
         # Remove scores for words that have been deleted manually by the user
         for id in list(scores.keys()):
             if int(id) not in self.loaded_ids:
                 scores.pop(id)
-                print(f'Removed ID {id}')
         return {'scores':scores, 'path':score_path}
 
     def save_all_scores(self) -> None:

@@ -246,7 +246,7 @@ class TrainerApp:
                 elif option == 'Edit Target':
                     new_target = self.edit_target(correct_answer)
                     self.question_handler.set_translation_target(question_idx, correct_answer, new_target)
-                    self.draw_text(correct_answer, rect=self.target_area, bgcolor=bgcolor)
+                    self.draw_text(new_target, rect=self.target_area, bgcolor=bgcolor)
     
     def edit_target(self, target):
         while True:
@@ -292,6 +292,7 @@ class TrainerApp:
         self.question_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
         self.question_handler.save_all_scores()
         self._save_settings(self.stg)
+        pygame.display.quit()
         pygame.quit()
         sys.exit()
     
