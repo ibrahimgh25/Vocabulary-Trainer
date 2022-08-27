@@ -13,10 +13,8 @@
  Installing and using the app is easy (for someone comfortable with python at least):
  - Clone the repository on your device.
  - [Optional] Create a conda environment with python 3.10:
- '''
-  conda create --name vocab_tool python=3.10
-  conda activate vocab_tool
- '''
+  >> conda create --name vocab_tool python=3.10
+  >> conda activate vocab_tool
  - Install the python packages necessary:
  '''
   pip install -r requirments.txt
