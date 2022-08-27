@@ -1,11 +1,11 @@
-from optparse import Option
-from typing import Iterable, Tuple, Optional
 import pygame
 import json, os
 import time
 import sys
 
-from .question_handler import QuestionHandler
+from typing import Iterable, Tuple, Optional
+
+from modules.support_classes import SettingsHandler, DatabaseHandler
 
 class TrainerApp:
     """ This class contains the main application that will handle the front-end, it will also control the back-end
@@ -13,10 +13,10 @@ class TrainerApp:
    
     def __init__(self, resource_dir:str):
         self.resource_dir = resource_dir
-        self.stg = self._get_settings()
+        self.stg = SettingsHandler(resource_dir)
 
         self.resource_dir = resource_dir
-        self.question_handler = QuestionHandler(self.stg['Database'], self.stg['Excel Sheet'])
+        self.db_handler = DatabaseHandler(self.stg['Database'], self.stg['Excel Sheet'])
 
         self.status = 'reset'
         self.user_answer = ''
@@ -32,37 +32,7 @@ class TrainerApp:
         self.bg = pygame.transform.scale(self.bg, img_size)
 
         self.screen = pygame.display.set_mode(img_size, pygame.RESIZABLE)
-        pygame.display.set_caption('Vocabulary Trainer')
-
-    def _get_settings(self):
-        """ Returns the settings of the application. If no settings file are found it creates and loads the default settings"""
-        settings_path = f'{self.resource_dir}/settings.json'
-        if not os.path.exists(settings_path):
-            self.restore_default_settings()
-        with open(settings_path, 'r') as f:
-            settings = json.load(f)
-        return settings
-    
-    def _save_settings(self, settings):
-        """
-        Saves the settings to the appropriate files (can be used when the settings are changed by the user)
-        :param settings: a dictionary containing the settings of the application
-
-        """
-        with open(f'{self.resource_dir}/settings.json', 'w') as f:
-            json.dump(settings, f)
-
-    def restore_default_settings(self):
-        """ Restore all the settings to the default value"""
-        settings = {
-            'Screen Resolution':(750, 500),
-            'Head Color':(255, 324, 102),
-            'Text Color':(240, 240, 240),
-            'Database':'resources/german_database.xlsx',
-            'Excel Sheet':'A1'
-        }
-        self._save_settings(settings)
-        
+        pygame.display.set_caption('Vocabulary Trainer')        
 
     def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         """
@@ -240,12 +210,12 @@ class TrainerApp:
             elif event.type == pygame.MOUSEBUTTONUP:
                 option = self.get_matching_area(options)
                 if option == 'Add Alternative Translation' and not correct_answer:
-                    self.question_handler.add_alternative_translation(question_idx, self.user_answer, direction)
+                    self.db_handler.add_alternative_translation(question_idx, self.user_answer, direction)
                 elif option == 'Delete Entry':
-                    self.question_handler.delete_entry(question_idx)
+                    self.db_handler.delete_entry(question_idx)
                 elif option == 'Edit Target':
                     new_target = self.edit_target(correct_answer)
-                    self.question_handler.set_translation_target(question_idx, correct_answer, new_target)
+                    self.db_handler.set_translation_target(question_idx, correct_answer, new_target)
                     self.draw_text(new_target, rect=self.target_area, bgcolor=bgcolor)
     
     def edit_target(self, target):
@@ -289,10 +259,8 @@ class TrainerApp:
             
     def quit(self):
         """ Performs the necessary actions before the application exits"""
-        self.question_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
-        self.question_handler.save_all_scores()
-        self._save_settings(self.stg)
-        pygame.display.quit()
+        self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+        self.stg.save_settings()
         pygame.quit()
         sys.exit()
     
@@ -305,13 +273,15 @@ class TrainerApp:
                 while(True):                    
                     if option == 'Translate Target to English':
                         exercise = 'Forward Translate'
+                        single_query = True
                     elif option == 'Translate English to Target':
                         exercise = 'Backward Translate'
+                        single_query = False
                     else:
                         break
-                    entry = self.question_handler.sample_question(exercise=exercise)
+                    entry = self.db_handler.sample_question(exercise, single_query)
                     answer = self.get_answer(entry['question'])
-                    result = self.question_handler.evaluate_answer(entry, answer, exercise)
+                    result = self.db_handler.evaluate_answer(entry, answer, exercise)
                     direction = exercise.split()[0]
                     value = self.display_question_results(entry['target'], result, entry['ID'], direction)
                     if value == 0:

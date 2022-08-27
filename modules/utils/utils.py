@@ -116,7 +116,7 @@ def matching(answer:str, target:str) -> bool:
     for value in [get_all_valid_answers(x) for x in correct_answers]:
         correct_answers += value
 
-    answer = re.sub(r'^a\s|^the\s|\sthe\s|\sa\s', '', clean_text(answer), flags=re.IGNORECASE).strip()
+    answer = clean_text(answer)
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
     return any([fuzz.ratio(answer, correct_answer.strip()) > 90 for correct_answer in correct_answers])
 
@@ -155,7 +155,8 @@ def clean_text(text):
     pairs2replace = {r"\[|\]|\.*|\?||\!":"",
                         '\'re ':' are ',
                         '\'s ':' is ',
-                        "won't":"will not"
+                        "won't":"will not",
+                        "\'m":" am"
                     }
 
     for key, replacement in pairs2replace.items():
@@ -167,7 +168,7 @@ def clean_text(text):
         replacement = match.replace("n't", " not")
         text = text.replace(match, replacement)
     # Remove everything between paranethesis
-    text = re.sub(r"\(.*\)", '', text)
+    text = re.sub(r"\([a-zA-Z 0-9]*\)", '', text)
     pattern = '|'.join(f'^{x}\s|\s{x}\s' for x in ['a', 'an', 'the'])
     text = re.sub(pattern, ' ', text)
     return text.strip()

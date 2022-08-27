@@ -1,17 +1,22 @@
+import re
 import shutil, os, datetime
 import json, warnings
+from modules.support_classes.scores import ScoresHandler
 
-from typing import Iterable, Tuple
+
 import numpy as np
 
-from .utils import (normalize_weights, 
+from typing import Iterable, Tuple
+from ..utils import ( 
                     generate_id, 
                     sample_entry, 
                     add_special_chars,
                     matching)
-from .utils.excel_ops import get_excel_df, save_to_excel
+from ..utils.excel_ops import get_excel_df, save_to_excel
 
-class QuestionHandler():
+from .scores import ScoresHandler
+
+class DatabaseHandler():
     """ This class handles loading, saving, and sampling from the database of vocabulary"""
     def __init__(self, excel_file, sheet_name):
         self.load_df(excel_file, sheet_name)
@@ -19,14 +24,10 @@ class QuestionHandler():
         # of the training session
         
         # Define the avialable for IDs
-        self.loaded_ids = self.lang_df['ID'].values
+        self.used_ids = self.lang_df['ID'].values
 
-        if not os.path.exists('resources/scores'):
-            os.mkdir('resources/scores')
-        # Load the scores
-        self.scores = {}
-        self.scores['Forward Translate'] = self.load_scores('translate', sheet_name, 'Forward')
-        self.scores['Backward Translate'] = self.load_scores('translate', sheet_name, 'Backward')
+        # Define the ScoreHandler instance
+        self.scores = ScoresHandler(sheet_name, self.used_ids)
 
     def load_df(self, excel_file:str, sheet_name:str) -> None:
         """
@@ -58,72 +59,47 @@ class QuestionHandler():
         # Handle for special characters that you're too lazy to type (like: Ö)
         answer = add_special_chars(answer)
         
-        id = str(entry['ID'])
         target = entry['target']
-        
         result = matching(answer, target)
-        if result:
-            self.scores[exercise]['scores'][id] += 1
-            # set the row to zero if it's still negative
-            self.scores[exercise]['scores'][id] = max(0, self.scores[exercise]['scores'][id])
-        elif result == False:
-            self.scores[exercise]['scores'][id] -= 1
+        # Update the scores
+        self.scores.update(entry['ID'], exercise, result)
         return result
             
     
-    def sample_question(self, exercise:str) -> dict:
+    def sample_question(self, exercise:str, single_query:bool=False) -> dict:
         """
         Sample a question for a specific exercise
         :param exercise: the name of the exercise
+        :param single_query: if True, a single word is arbitrary chosen as the question, e.g.,
+         instead of "nice, beautiful, pretty" the question could be "pretty"
         :returns: a dictionary with the following form:
          {'question':question_text, 'ID':id, 'target':target}
         """
-        # I know below is a lot of text, but bare with me
-        weights = list(self.scores[exercise]['scores'].values())
-        draw = np.random.choice(self.loaded_ids, p=normalize_weights(weights))
-        idx = np.where(self.loaded_ids==draw)[0][0]
+        # Get the weights to use in the drawing process
+        weights = self.scores.get_weights(exercise)
+        draw = np.random.choice(self.used_ids, p=weights)
+        idx = np.where(self.used_ids==draw)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
         # RENAME THIS
         query, target = self.formulate_translation_question(entry, exercise.split()[0])
+        # If a single query is required, remove the paranthesis and choose a random word
+        # for asking
+        if single_query:
+            query = re.sub(r'\([^)]*\)', '', query)
+            query = np.random.choice(re.split(',|;', query)).strip()
+
         return {'question':query, 'ID':entry['ID'], 'target':target}
 
-    def load_scores(self, *args) -> dict:
-        """Load the scores for a particular task
-
-        :param *args: all the arguments should be strings, they're added
-         together to create the filename
-        :returns: a dictionary containing the path to the score and loaded score
-        """
-        score_path = 'resources/scores/' + '_'.join([*args]) + '.json'
-        try:
-            scores = json.load(open(score_path, 'r'))
-        except:
-            scores = {}
-        
-        # Fill in for the new IDs that still have no entry in the score
-        for id in self.loaded_ids:
-            if not str(id) in scores.keys():
-                scores[str(id)] = 0
-        # Remove scores for words that have been deleted manually by the user
-        for id in list(scores.keys()):
-            if int(id) not in self.loaded_ids:
-                scores.pop(id)
-        return {'scores':scores, 'path':score_path}
-
-    def save_all_scores(self) -> None:
-        """ Saves all the scores to their respective files"""
-        for score in self.scores.values():
-            json.dump(score['scores'], open(score['path'], 'w'))
-    
-    
-
-    def save_database(self, excel_file:str, sheet_name:str) -> None:
+    def save_database(self, excel_file:str, sheet_name:str, save_scores:bool=True) -> None:
         """Save the database to an excel file
 
         :param excel_file: the name of the excel file
         :param sheet_name: the sheet name used for saving
+        :param save_scores: if True the scores in self.scores will be saved too
         """
         save_to_excel(self.lang_df, excel_file, sheet_name)
+        if save_scores:
+            self.scores.save_all_scores()
     
     def get_matching_indices(self, category:str) -> Iterable[int]:
         """
@@ -181,10 +157,12 @@ class QuestionHandler():
         query, query_key = sample_entry(entry, query_keys)
         if direction == 'Backward' and target_key != '':
             query = query + ' (' + target_key.split('_')[-1] + ')'
+        
         return query, target
     
     def add_alternative_translation(self, id, translation, direction):
-        idx = np.where(self.loaded_ids==id)[0][0]
+        ''' Add an alternative translation to specific word'''
+        idx = np.where(self.used_ids==id)[0][0]
         assert direction in ['Forward', 'Backward']
         column = f'Alternative {direction}'
         if ';' in translation or ',' in translation:
@@ -198,17 +176,21 @@ class QuestionHandler():
         return True
     
     def delete_entry(self, idx):
-        for exercise in self.scores.keys():
-            self.scores[exercise]['scores'].pop(str(idx))
-        
-        idx = np.where(self.loaded_ids==idx)[0][0]
+        ''' Delete a specific entry in the database'''
+        # Delete the score for that entry too
+        self.scores.remove_id(idx)
+
+        idx = np.where(self.used_ids==idx)[0][0]
         self.lang_df.drop(int(idx), axis=0, inplace=True)
 
-        self.loaded_ids = self.lang_df['ID'].values
+        self.used_ids = self.lang_df['ID'].values
         
     def set_translation_target(self, idx, old_target, new_target):
-        idx = np.where(self.loaded_ids==idx)[0][0]
+        idx = np.where(self.used_ids==idx)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
         for key, value in entry.items():
             if value == old_target:
                 self.lang_df.loc[self.lang_df.index==idx, key] = new_target
+    
+    def apply_filter(self, categories='', top_n=None):
+        pass
