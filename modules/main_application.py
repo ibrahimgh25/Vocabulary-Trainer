@@ -1,12 +1,12 @@
 import pygame
-import json, os
-import time
-import sys
+import sys, io
+import matplotlib.pyplot as plt
 
+from PIL import Image
 from typing import Iterable, Tuple, Optional
 
-from modules.support_classes import SettingsHandler, DatabaseHandler
-
+from .support_classes import SettingsHandler, DatabaseHandler
+from .utils import rel2abs
 class TrainerApp:
     """ This class contains the main application that will handle the front-end, it will also control the back-end
          class (QuestionHandler)"""
@@ -21,6 +21,12 @@ class TrainerApp:
         self.status = 'reset'
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
+        # A dictionary to map the option name with the corresponding exercise
+        self.exercises = {
+            'Translate Target to English':'Forward Translate',
+            'Translate English to Target':'Backward Translate',
+            'Back':'Back'
+            }
         
         img_size = self.stg['Screen Resolution']
         pygame.init()
@@ -105,13 +111,11 @@ class TrainerApp:
     def choose_exercise(self):
         ''' Choose an exercise to either display its score or practice it'''
         self.reset_screen(self.home_img)
-        options = ['Translate English to Target',
-                    'Translate Target to English',
-                    'Back'
-                    ]
+        options = list(self.exercises.keys())
         dimensions = {'rel_y':29, 'rel_x':5, 'rel_w':35, 'rel_h':10, 'rel_gap':1.6}
         options = self.add_options(options, dimensions)
-        return self.get_user_option(options)
+        chosen_option = self.get_user_option(options)
+        return self.exercises[chosen_option]
         
     
     def get_user_option(self, options):
@@ -121,7 +125,7 @@ class TrainerApp:
             self.handle_for_repeating_events(event)
             if event.type == pygame.MOUSEBUTTONUP:
                 matching_area = self.get_matching_area(options)
-                if matching_area is not None:
+                if matching_area != '':
                     return matching_area
 
     def get_matching_area(self, options:Iterable[Tuple]):
@@ -259,8 +263,8 @@ class TrainerApp:
             
     def quit(self):
         """ Performs the necessary actions before the application exits"""
-        self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
-        self.stg.save_settings()
+        # self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+        # self.stg.save_settings()
         pygame.quit()
         sys.exit()
     
@@ -269,16 +273,11 @@ class TrainerApp:
         while(True):
             option = self.start()
             if option == 'Practice':
-                option = self.choose_exercise()
+                exercise = self.choose_exercise()
+                if exercise == 'Back':
+                    continue
                 while(True):                    
-                    if option == 'Translate Target to English':
-                        exercise = 'Forward Translate'
-                        single_query = True
-                    elif option == 'Translate English to Target':
-                        exercise = 'Backward Translate'
-                        single_query = False
-                    else:
-                        break
+                    single_query = (exercise == 'Forward Translate') # We use single query if translating from target only
                     entry = self.db_handler.sample_question(exercise, single_query)
                     answer = self.get_answer(entry['question'])
                     result = self.db_handler.evaluate_answer(entry, answer, exercise)
@@ -288,9 +287,10 @@ class TrainerApp:
                         break
             elif option == 'Show Scores':
                 exercise = self.choose_exercise()
-                print(exercise)
                 if exercise == 'Back':
                     continue
+                else:
+                    self.show_scores_summary(exercise)
             
             elif option == 'Settings':
                 print('Wrong Choice')
@@ -301,7 +301,7 @@ class TrainerApp:
         """
         Calculates equidistant placements for objects on a screen
         :param item_names: a list of strings containing the name of the items to be added
-         to assign a type to an item you could add it after a '.', e.g. "Start.TextArea"
+         to assign a type to an item you could add it after a '|', e.g. "Start|TextArea"
         :params dimensions: dictionary contining the rel (in %) dimensions of the items
          it should contain the following keys: 
          - rel_y: the starting y relative to the height
@@ -323,8 +323,8 @@ class TrainerApp:
         gap_h = int(dimensions['rel_gap']*w) + width if horizontal else 0
         output = []
         for item in item_names:
-            item += '.' # To account for when the type isn't added
-            name, item_type = tuple(item.split('.'))[:2]
+            item += '|' # To account for when the type isn't added
+            name, item_type = tuple(item.split('|'))[:2]
             output.append((name, (current_x, current_y, width, height), item_type))
             current_y += gap_v
             current_x += gap_h
@@ -342,3 +342,59 @@ class TrainerApp:
         for item in items:
             fsize = item[1][3]//2 # The font size will be half the rectangle height
             self.draw_text(item[0], rect=item[1], fsize=fsize, fgcolor=fgcolor, bgcolor=bgcolor)
+    
+    def show_scores_summary(self, exercise:str):
+        ''' Displays a page with a summary of the scores for a particular exercise'''
+        summary = self.db_handler.get_scores_summary(exercise)
+        self.screen.fill((0, 0, 0))
+        screen_w, screen_h = self.stg['Screen Resolution']
+        font = pygame.font.Font(None, int(0.1*screen_h/2))
+        exercise = [i for i in self.exercises if self.exercises[i]==exercise][0]
+        # The title
+        text = font.render(exercise, True, (19, 161, 14))
+        text_rect = text.get_rect(center=(screen_w/2, screen_h/20))
+        self.screen.blit(text, text_rect)
+        # Calculate the rects of the different fields
+        item_names = [
+            f"Number of Entries: {summary['entries count']}",
+            f"Worst Word: {summary['min'][0]}",
+            f"Best Word: {summary['max'][0]}",
+            f"Average Score: {format(summary['average'])}"
+        ]
+        dims = {'rel_y':15, 'rel_x':10, 'rel_w':80, 'rel_h':8, 'rel_gap':2}
+        placements = self.calculate_rect_placements(item_names, dims)
+        # Change the placements of the first and teh last element to be at the same vertical level
+        x, y, w, h = placements[0][1]
+        placements[0] = (placements[0][0], [x, y, int(0.45*w), h], '')
+        placements[-1] = (placements[-1][0], [int(0.55*w) + x, y, int(0.45*w), h], '')
+        
+        self.add_items_to_screen(placements)
+
+        # Draw graph showing the distribution
+        X = [x for x, _ in summary['distribution'].items()]
+        y = [y for _, y in summary['distribution'].items()]
+        plt.clf()
+        plt.bar(X, y)
+
+        plt.xticks(color='white')
+        plt.yticks(color='white')
+        plt.title('Scores Distribution')
+
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png', facecolor=(0,0,0,0))
+
+        ref = self.stg['Screen Resolution']
+        rect = rel2abs([0.1, 0.4, 0.8, 0.55], ref)
+        
+        im = Image.open(img_buf)
+        raw_str = im.tobytes("raw", 'RGBA')
+        im = pygame.image.fromstring(raw_str, im.size, 'RGBA')
+        
+        im = pygame.transform.scale(im, rect[2:])
+        self.screen.blit(im, rect[:2])
+        pygame.display.update()
+        while(True):
+            event = pygame.event.wait()
+            self.handle_for_repeating_events(event)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return

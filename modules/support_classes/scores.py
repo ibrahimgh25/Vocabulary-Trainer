@@ -10,10 +10,10 @@ class ScoresHandler(dict):
             os.mkdir('resources/scores')
 
         super().__init__()
-        self['Forward Translate'] = self.load_scores(loaded_ids, 'translate', sheet_name, 'Forward')
-        self['Backward Translate'] = self.load_scores(loaded_ids, 'translate', sheet_name, 'Backward')
+        self['Forward Translate'] = self.load(loaded_ids, 'translate', sheet_name, 'Forward')
+        self['Backward Translate'] = self.load(loaded_ids, 'translate', sheet_name, 'Backward')
 
-    def load_scores(self, loaded_ids, *args) -> dict:
+    def load(self, loaded_ids, *args) -> dict:
         """Load the scores for a particular task
 
         :param *args: all the arguments should be strings, they're added
@@ -59,7 +59,7 @@ class ScoresHandler(dict):
         for exercise in self.keys():
             self[exercise]['scores'].pop(str(id))
     
-    def summarize_scores(self, exercise):
+    def summarize(self, exercise):
         ''''''
         scores = list(self[exercise]['scores'].values())
         ids = list(self[exercise]['scores'].keys())
@@ -69,8 +69,8 @@ class ScoresHandler(dict):
 
         summary = {
             'average':np.average(scores),
-            'min':(ids[min_idx], scores[min_idx]),
-            'max':(ids[max_idx], scores[max_idx]),
+            'min':[ids[min_idx], scores[min_idx]],
+            'max':[ids[max_idx], scores[max_idx]],
             'distribution':Counter(scores),
             'entries count':len(scores)
         }

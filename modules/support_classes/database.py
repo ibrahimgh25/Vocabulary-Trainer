@@ -6,7 +6,7 @@ from modules.support_classes.scores import ScoresHandler
 
 import numpy as np
 
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Union
 from ..utils import ( 
                     generate_id, 
                     sample_entry, 
@@ -90,7 +90,7 @@ class DatabaseHandler():
 
         return {'question':query, 'ID':entry['ID'], 'target':target}
 
-    def save_database(self, excel_file:str, sheet_name:str, save_scores:bool=True) -> None:
+    def save_database(self, excel_file:Union[str, os.PathLike], sheet_name:str, save_scores:bool=True) -> None:
         """Save the database to an excel file
 
         :param excel_file: the name of the excel file
@@ -112,7 +112,7 @@ class DatabaseHandler():
         indices = self.lang_df[self.lang_df['Category'].isin(categories)].index
         return indices
 
-    def backup_database(self, excel_file, add_timestamp=True):
+    def backup_database(self, excel_file:Union[str, os.PathLike], add_timestamp:bool=True):
         """Backup the database to a backup path
 
         :param excel_file: 
@@ -160,8 +160,12 @@ class DatabaseHandler():
         
         return query, target
     
-    def add_alternative_translation(self, id, translation, direction):
-        ''' Add an alternative translation to specific word'''
+    def add_alternative_translation(self, id:int, translation:str, direction:str):
+        ''' Add an alternative translation to specific word
+            :param id: the id of the entry in the database
+            :param translation: the alternative translation to add
+            :param direction: the direction of the translation
+        '''
         idx = np.where(self.used_ids==id)[0][0]
         assert direction in ['Forward', 'Backward']
         column = f'Alternative {direction}'
@@ -175,17 +179,22 @@ class DatabaseHandler():
             self.lang_df.loc[self.lang_df.index==idx, column] = translation
         return True
     
-    def delete_entry(self, idx):
+    def delete_entry(self, entry_id:int):
         ''' Delete a specific entry in the database'''
         # Delete the score for that entry too
-        self.scores.remove_id(idx)
+        self.scores.remove_id(entry_id)
 
-        idx = np.where(self.used_ids==idx)[0][0]
+        idx = np.where(self.used_ids==entry_id)[0][0]
         self.lang_df.drop(int(idx), axis=0, inplace=True)
 
         self.used_ids = self.lang_df['ID'].values
         
-    def set_translation_target(self, idx, old_target, new_target):
+    def set_translation_target(self, idx:int, old_target:str, new_target:str):
+        ''' Change the translation target of an entry
+            :param ids: the id of the entry
+            :param old_target: the old translation target (to determine which fields to change
+            :param new_target: the new translation target (to replace the old one)
+        '''
         idx = np.where(self.used_ids==idx)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
         for key, value in entry.items():
@@ -194,3 +203,14 @@ class DatabaseHandler():
     
     def apply_filter(self, categories='', top_n=None):
         pass
+
+    def get_scores_summary(self, exercise):
+        summary = self.scores.summarize(exercise)
+        # Replace the ids by their names
+        for key in ['max', 'min']:
+            element_id = int(summary[key][0])
+            idx = np.where(self.used_ids==element_id)[0][0]
+            summary[key][0] = self.lang_df.loc[self.lang_df.index==idx, 'Word_s'].values[0]
+        # Round the average score to two decimal points
+        summary['average'] = round(summary['average'], 2)
+        return summary
