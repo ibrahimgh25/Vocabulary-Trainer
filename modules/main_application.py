@@ -263,8 +263,8 @@ class TrainerApp:
             
     def quit(self):
         """ Performs the necessary actions before the application exits"""
-        # self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
-        # self.stg.save_settings()
+        self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+        self.stg.save_settings()
         pygame.quit()
         sys.exit()
     
