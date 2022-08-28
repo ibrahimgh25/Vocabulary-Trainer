@@ -7,7 +7,7 @@
  - A way to store scores over multiple sessions (scores for an exercise are stored as json files with ID linking to the database)
  - The tool is more custimized towards English as the "language you know", but could work with other langauges.
  - A way to edit, delete, or add alternative translations when working with the app.
- - A way to visualize the score in a particular exercise.
+ - A way to visualize the score for a particular exercise.
  
  ## Installation and Usage
  Installing and using the app is easy (for someone comfortable with python at least):
@@ -43,7 +43,6 @@ The tool was inspired by [LearnDW](https://learngerman.dw.com/en/overview) which
 Also, I haven't done a GUI interface before, so I got started by learning from the code in ["codecravings/Speed-Typing-Test-Python"](https://github.com/codecravings/Speed-Typing-Test-Python).
 
 ## Documentation tasks
-- Add how to install and use the tool.
 - Add documentation for the tool structure.
 - Add some screenshots for the tool
 - Add instructions for building the database
