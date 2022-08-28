@@ -13,13 +13,18 @@
  Installing and using the app is easy (for someone comfortable with python at least):
  - Clone the repository on your device.
  - [Optional] Create a conda environment with python 3.10:
-  > conda create --name vocab_tool python=3.10
-  > conda activate vocab_tool <br>
+ '''
+  conda create --name vocab_tool python=3.10
+  conda activate vocab_tool <br>
+ '''
  - Install the python packages necessary:
-  > pip install -r requirments.txt <br>
+'''
+  pip install -r requirments.txt <br>
+''' 
  To use the tool, just activate your environment (if on conda), and run the script in main.py
-  > python main.py <br>
-
+'''
+  python main.py <br>
+'''
  By default, the tool will select the database in "resources/german_database.xlsx" and the excel sheet "A1". You can add word by updating the selected database, or change the selected excel path to a custom file (make sure your file have the same columns as the one in "german_database.xlsx").
  ## Possible Additions
  - Adding settings to the GUI that allow for custimizing several parameters.
