@@ -1,4 +1,5 @@
 import warnings, re
+import json
 
 import numpy as np
 
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 from fuzzywuzzy import fuzz
 from collections import Counter
 
+from langdetect import detect
 from typing import Union, Iterable, Tuple
 
 def normalize_weights(scores:Iterable[int]) -> np.ndarray:
@@ -172,3 +174,15 @@ def clean_text(text):
     pattern = '|'.join(f'^{x}\s|\s{x}\s' for x in ['a', 'an', 'the'])
     text = re.sub(pattern, ' ', text)
     return text.strip()
+
+def detect_language(text:Union[Iterable, str], lang_mapping_file:str='resources/lang_codes.json'):
+    ''' Detects the language of a list of texts or a string of texts'''
+    if isinstance(text, Iterable):
+        text = ' '.join(text)
+    lang_code = detect(text)
+    # Try to map the language code to it name, e.g. 'en' -> English
+    with open(lang_mapping_file, 'r', encoding='utf-8') as f:
+        lang_mapping = json.load(f)
+    if lang_code in lang_mapping.keys():
+        return lang_mapping[lang_code]
+    return 'Target' # If the language code isn't found return a place holder

@@ -6,7 +6,7 @@ from PIL import Image
 from typing import Iterable, Tuple, Optional
 
 from .support_classes import SettingsHandler, DatabaseHandler
-from .utils import rel2abs
+from .utils import rel2abs, detect_language
 class TrainerApp:
     """ This class contains the main application that will handle the front-end, it will also control the back-end
          class (QuestionHandler)"""
@@ -21,10 +21,13 @@ class TrainerApp:
         self.status = 'reset'
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
+        # Detect the target language so it can be used in the exercise names
+        self.target_lang = detect_language(self.db_handler.lang_df['Word_s'])
+        self.source_lang = detect_language(self.db_handler.lang_df['Translation'])
         # A dictionary to map the option name with the corresponding exercise
         self.exercises = {
-            'Translate Target to English':'Forward Translate',
-            'Translate English to Target':'Backward Translate',
+            f'Translate {self.target_lang} to {self.source_lang}':'Forward Translate',
+            f'Translate {self.source_lang} to {self.target_lang}':'Backward Translate',
             'Back':'Back'
             }
         
