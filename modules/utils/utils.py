@@ -114,12 +114,13 @@ def matching(answer:str, target:str) -> bool:
     :param target: the correct answer
     :returns: True if the answer is matching else False
     """
-    correct_answers = re.split(',|;', clean_text(target))
+    correct_answers = re.split('[,;](?=[^,;]+?:)', clean_text(target))
     for value in [get_all_valid_answers(x) for x in correct_answers]:
         correct_answers += value
 
     answer = clean_text(answer)
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
+    print(answer, correct_answers)
     return any([fuzz.ratio(answer, correct_answer.strip()) > 90 for correct_answer in correct_answers])
 
 def get_all_valid_answers(sentences:Union[str, Iterable[str]], choices:Iterable[Tuple[str, Iterable[str]]]=[]):
@@ -158,19 +159,20 @@ def clean_text(text):
                         '\'re ':' are ',
                         '\'s ':' is ',
                         "won't":"will not",
-                        "\'m":" am"
+                        "’": "'",
+                        "'m":" am",
                     }
 
     for key, replacement in pairs2replace.items():
         text = re.sub(key, replacement, text)
-    # Replace all the not abreviations
+    # Replace all the "not" abreviations, e.g. doesn't -> doesn not
     regex = re.compile(r"\b[A-Za-z]+n't\b")
     matches = re.findall(regex, text)
     for match in matches:
         replacement = match.replace("n't", " not")
         text = text.replace(match, replacement)
     # Remove everything between paranethesis
-    text = re.sub(r"\([a-zA-Z 0-9]*\)", '', text)
+    text = re.sub(r"\([^()]*\)", '', text)
     pattern = '|'.join(f'^{x}\s|\s{x}\s' for x in ['a', 'an', 'the'])
     text = re.sub(pattern, ' ', text)
     return text.strip()
