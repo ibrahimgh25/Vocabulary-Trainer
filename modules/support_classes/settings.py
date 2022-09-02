@@ -1,6 +1,7 @@
-import json
+import json, os
 
 import warnings
+from .default_settings import DEFAULT_SETTINGS
 
 class SettingsHandler(dict):
     def __init__(self, resource_dir, *args, **kwargs):
@@ -10,34 +11,29 @@ class SettingsHandler(dict):
     
     def restore_default_settings(self):
         """ Restore all the settings to the default value"""
-        settings = {
-            'Screen Resolution':(750, 500),
-            'Head Color':(255, 324, 102),
-            'Text Color':(240, 240, 240),
-            'Database':'resources/german_database.xlsx',
-            'Excel Sheet':'A1'
-        }
-        self.save_settings(settings)
-        self._copy_settings_from_dict(settings)
+        self.save_settings(DEFAULT_SETTINGS)
+        self._copy_settings_from_dict(DEFAULT_SETTINGS)
     
-    def save_settings(self):
+    def save_settings(self, settings:Optional[dict]=None):
         """
         Saves the settings to the appropriate files (can be used when the settings are changed by the user)
-        :param settings: a dictionary containing the settings of the application
-
+        :param settings: a dictionary containing the settings of the application, if no settings are in the input,
+         then the settings of the app are saved
         """
+        if settings is None:
+            settings = self.copy()
         with open(self.path, 'w') as f:
-            json.dump(self.copy(), f)
+            json.dump(settings, f)
     
     def _get_settings(self):
         """ Returns the settings of the application. If no settings file are found it creates and loads the default settings"""
         try:
             with open(self.path, 'r') as f:
                 settings = json.load(f)
+            self._copy_settings_from_dict(settings)
         except:
             warnings.warn('Failed to recover setttings file. Restoring to default settings.')
-            settings = self.restore_default_settings()
-        self._copy_settings_from_dict(settings)
+            self.restore_default_settings()
     
     def settings_menu(self, screen):
         pass
