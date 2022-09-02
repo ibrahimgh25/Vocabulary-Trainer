@@ -1,11 +1,12 @@
 import json, os
+from typing import Iterable, Union
 import numpy as np
 
 from collections import Counter
 from ..utils import normalize_weights
 
 class ScoresHandler(dict):
-    def __init__(self, sheet_name, loaded_ids):
+    def __init__(self, sheet_name:str, loaded_ids:Iterable[int]):
         if not os.path.exists('resources/scores'):
             os.mkdir('resources/scores')
 
@@ -13,12 +14,14 @@ class ScoresHandler(dict):
         self['Forward Translate'] = self.load(loaded_ids, 'translate', sheet_name, 'Forward')
         self['Backward Translate'] = self.load(loaded_ids, 'translate', sheet_name, 'Backward')
 
-    def load(self, loaded_ids, *args) -> dict:
+    def load(self, loaded_ids:Iterable[str], *args) -> dict:
         """Load the scores for a particular task
-
+        :param loaded_ids: the ids loaded from the database, used to drop or add entries to
+         the loaded scores
         :param *args: all the arguments should be strings, they're added
          together to create the filename
-        :returns: a dictionary containing the path to the score and loaded score
+        :returns: a dictionary containing the path to the scores and their values
+         e.g. {'path':'path/to/scores', 'scores':{'123432':1, '126432':-3, '123532':2, '123332':5}}
         """
         score_path = 'resources/scores/' + '_'.join([*args]) + '.json'
         try:
@@ -41,8 +44,8 @@ class ScoresHandler(dict):
         for score in self.values():
             json.dump(score['scores'], open(score['path'], 'w'))
     
-    def update(self, id, exercise, result):
-        """"""
+    def update(self, id:Union[str, int], exercise:str, result:bool):
+        """ Update the score for a given id based on how the user answered"""
         id = str(id) # Make sure that id is a string
         if result:
             self[exercise]['scores'][id] += 1
@@ -51,16 +54,26 @@ class ScoresHandler(dict):
         elif result == False:
             self[exercise]['scores'][id] -= 1
     
-    def get_weights(self, exercise):
-        weights = list(self[exercise]['scores'].values())
-        return normalize_weights(weights)
+    def get_weights(self, exercise:str, ids:Iterable[Union[int, str]]=[]):
+        ''' Returns a list of weights for given ids
+            :param exercise: the name of the exercise used for the scores
+            :param ids: the list of ids included in the sampling process, if empty
+             the scores are not filtered
+            :returns: a list of numbers between 0 and 1 corresponding to the weights
+             of the input ids'''
+        if len(ids) > 0:
+            scores = [self[exercise]['scores'][str(x)] for x in ids]
+        else:
+            scores = self[exercise]['scores'].values()
+        return normalize_weights(list(scores))
     
-    def remove_id(self, id):
+    def remove_id(self, id:Union[str, int]):
+        ''' Delete all the scores for a given id'''
         for exercise in self.keys():
             self[exercise]['scores'].pop(str(id))
     
-    def summarize(self, exercise):
-        ''''''
+    def summarize(self, exercise:str):
+        ''' Return a summary to describe certain scores'''
         scores = list(self[exercise]['scores'].values())
         ids = list(self[exercise]['scores'].keys())
 

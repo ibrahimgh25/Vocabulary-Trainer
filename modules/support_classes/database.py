@@ -76,7 +76,7 @@ class DatabaseHandler():
          {'question':question_text, 'ID':id, 'target':target}
         """
         # Get the weights to use in the drawing process
-        weights = self.scores.get_weights(exercise)
+        weights = self.scores.get_weights(exercise, self.used_ids)
         draw = np.random.choice(self.used_ids, p=weights)
         idx = np.where(self.used_ids==draw)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
