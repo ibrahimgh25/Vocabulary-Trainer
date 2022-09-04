@@ -66,29 +66,38 @@ class DatabaseHandler():
         return result
             
     
-    def sample_question(self, exercise:str, single_query:bool=False) -> dict:
+    def sample_questions(self, exercise:str, single_query:bool=False, n:int=1) -> dict:
         """
         Sample a question for a specific exercise
         :param exercise: the name of the exercise
         :param single_query: if True, a single word is arbitrary chosen as the question, e.g.,
          instead of "nice, beautiful, pretty" the question could be "pretty"
+        :param n: number of smaples produced, when more than 1 is needed we return only the ids
         :returns: a dictionary with the following form:
          {'question':question_text, 'ID':id, 'target':target}
         """
         # Get the weights to use in the drawing process
         weights = self.scores.get_weights(exercise, self.used_ids)
-        draw = np.random.choice(self.used_ids, p=weights)
-        idx = np.where(self.used_ids==draw)[0][0]
-        entry = self.lang_df.loc[idx].to_dict()
-        # RENAME THIS
-        query, target = self.formulate_translation_question(entry, exercise.split()[0])
-        # If a single query is required, remove the paranthesis and choose a random word
-        # for asking
-        if single_query:
-            query = re.sub(r'\([^)]*\)', '', query)
-            query = np.random.choice(re.split(',|;', query)).strip()
-
-        return {'question':query, 'ID':entry['ID'], 'target':target}
+        if n < len(self.used_ids):
+            draws = np.random.choice(self.used_ids, p=weights, replace=False, size=n)
+        else:
+            draws = self.used_ids
+        indices = [np.where(self.used_ids==x)[0][0] for x in draws]
+        entries = [self.lang_df.loc[idx].to_dict() for idx in indices]
+        output = []
+        for entry in entries:
+            # RENAME THIS
+            query, target = self.formulate_translation_question(entry, exercise.split()[0])
+            # If a single query is required, remove the paranthesis and choose a random word
+            # for asking
+            if single_query:
+                query = re.sub(r'\([^)]*\)', '', query)
+                query = np.random.choice(re.split(',|;', query)).strip()
+            output.append({'question':query, 'ID':entry['ID'], 'target':target})
+        
+        if n == 1:
+            return output[0]
+        return output
 
     def save_database(self, excel_file:Union[str, os.PathLike], sheet_name:str, save_scores:bool=True) -> None:
         """Save the database to an excel file
@@ -201,15 +210,36 @@ class DatabaseHandler():
             if value == old_target:
                 self.lang_df.loc[self.lang_df.index==idx, key] = new_target
     
-    def apply_filter(self, categories='', top_n=None):
-        pass
-
+    def apply_filter(self, exercise:str, n_samples:int=0, included_categories:Iterable[str]=[], excluded_categories:Iterable[str]=[]):
+        ''' Apply a filter to the available questions
+            :param exercise: the name of the exercise to use for getting the weights when sampling
+            :param n_samples: the number of samples to be set in the final filtering
+            :param included_categories: the categories to be sampled in (white filter)
+            :param excluded_categories: the categories to be sampled out (black filter)
+        '''
+        df = self.lang_df # Just to have a shorter code
+        matches_category = lambda x, cat: cat in df.loc[df['ID']==x, 'Category'].values[0]
+        # Exclude the categories in excluded categories
+        for cat in excluded_categories:
+            print(cat, len(self.used_ids))
+            self.used_ids = [x for x in self.used_ids if not matches_category(x, cat)]
+            print(len(self.used_ids))
+        # Include only the categories in included_categories
+        for cat in included_categories:
+            self.used_ids = [x for x in self.used_ids if matches_category(x, cat)]
+        # Sample the needed number of words
+        if n_samples > 0:
+            sampled_entries = self.sample_questions(exercise, n=n_samples)
+            self.used_ids = [x['ID'] for x in sampled_entries]
+            
     def get_scores_summary(self, exercise):
+        ''' Return the score summary for a particular exercise'''
         summary = self.scores.summarize(exercise)
         # Replace the ids by their names
+        ids = self.lang_df['ID'].values
         for key in ['max', 'min']:
             element_id = int(summary[key][0])
-            idx = np.where(self.used_ids==element_id)[0][0]
+            idx = np.where(ids==element_id)[0][0]
             summary[key][0] = self.lang_df.loc[self.lang_df.index==idx, 'Word_s'].values[0]
         # Round the average score to two decimal points
         summary['average'] = round(summary['average'], 2)

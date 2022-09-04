@@ -11,7 +11,7 @@ class TrainerApp:
     """ This class contains the main application that will handle the front-end, it will also control the back-end
          class (QuestionHandler)"""
    
-    def __init__(self, resource_dir:str):
+    def __init__(self, resource_dir:str, mode='practice'):
         self.resource_dir = resource_dir
         self.stg = SettingsHandler(resource_dir)
 
@@ -21,7 +21,7 @@ class TrainerApp:
         self.status = 'reset'
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
-        # Detect the target language so it can be used in the exercise names
+        # Detect the target and source languages so they can be used in the exercise names
         self.target_lang = detect_language(self.db_handler.lang_df['Word_s'])
         self.source_lang = detect_language(self.db_handler.lang_df['Translation'])
         # A dictionary to map the option name with the corresponding exercise
@@ -31,17 +31,20 @@ class TrainerApp:
             'Back':'Back'
             }
         
-        img_size = self.stg['Screen Resolution']
         pygame.init()
-        self.home_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
-        self.home_img = pygame.transform.scale(self.home_img, img_size)
+        self.load_images()
+        pygame.display.set_caption('Vocabulary Trainer')
 
+        # Apply the filtering
+        if len(self.stg['Sampled Words']) != self.stg['Sample Size']:
+            included_cats, excluded_cats= self.stg['Included Categories'], self.stg['Excluded Categories']
+            n_samples = self.stg['Sample Size']
+            self.db_handler.apply_filter('Forward Translate', n_samples, included_cats, excluded_cats)
+            self.stg['Sampled Words'] = self.db_handler.used_ids
+        elif len(self.stg['Sampled Words']) > 0:
+            self.db_handler.used_ids = self.stg['Sampled Words']
 
-        self.bg = pygame.image.load(f'{resource_dir}/background.jpg')
-        self.bg = pygame.transform.scale(self.bg, img_size)
-
-        self.screen = pygame.display.set_mode(img_size, pygame.RESIZABLE)
-        pygame.display.set_caption('Vocabulary Trainer')        
+        self.mode = mode 
 
     def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         """
@@ -92,6 +95,18 @@ class TrainerApp:
             current_y += gap + height
         return output
     
+
+    def load_images(self):
+        ''' Load and reshape the images used by the app'''
+        img_size, resource_dir = self.stg['Screen Resolution'], self.resource_dir
+        self.home_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
+        self.home_img = pygame.transform.scale(self.home_img, img_size)
+
+
+        self.bg = pygame.image.load(f'{resource_dir}/background.jpg')
+        self.bg = pygame.transform.scale(self.bg, img_size)
+
+        self.screen = pygame.display.set_mode(img_size)
      
     def start(self):
         """ This function displays the main menu until the user chooses a valid option
@@ -216,10 +231,12 @@ class TrainerApp:
                 return 0
             elif event.type == pygame.MOUSEBUTTONUP:
                 option = self.get_matching_area(options)
-                if option == 'Add Alternative Translation' and not correct_answer:
+                if option == 'Add Alternative Translation' and not answered_correctly:
                     self.db_handler.add_alternative_translation(question_idx, self.user_answer, direction)
+                    self.draw_text(correct_answer, rect=self.target_area, bgcolor=(220, 220, 0))
                 elif option == 'Delete Entry':
                     self.db_handler.delete_entry(question_idx)
+                    self.draw_text(correct_answer, rect=self.target_area, bgcolor=(0, 220, 220))
                 elif option == 'Edit Target':
                     new_target = self.edit_target(correct_answer)
                     self.db_handler.set_translation_target(question_idx, correct_answer, new_target)
@@ -266,8 +283,10 @@ class TrainerApp:
             
     def quit(self):
         """ Performs the necessary actions before the application exits"""
-        self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
-        self.stg.save_settings()
+        # This is to avoid saving every time the app is tested while developing
+        if self.mode != 'testing':
+            self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+            self.stg.save_settings()
         pygame.quit()
         sys.exit()
     
@@ -281,7 +300,7 @@ class TrainerApp:
                     continue
                 while(True):                    
                     single_query = (exercise == 'Forward Translate') # We use single query if translating from target only
-                    entry = self.db_handler.sample_question(exercise, single_query)
+                    entry = self.db_handler.sample_questions(exercise, single_query)
                     answer = self.get_answer(entry['question'])
                     result = self.db_handler.evaluate_answer(entry, answer, exercise)
                     direction = exercise.split()[0]
@@ -296,7 +315,9 @@ class TrainerApp:
                     self.show_scores_summary(exercise)
             
             elif option == 'Settings':
-                print('Wrong Choice')
+                # This doesn't work for now
+                # self.stg.settings_menu(self.screen)
+                print('Under Development')
             elif option == 'Exit':
                 self.quit()
     
@@ -348,6 +369,7 @@ class TrainerApp:
     
     def show_scores_summary(self, exercise:str):
         ''' Displays a page with a summary of the scores for a particular exercise'''
+        # LATER SHOULD BE CHANGED TO A BETTER IMPLMENTATION
         summary = self.db_handler.get_scores_summary(exercise)
         self.screen.fill((0, 0, 0))
         screen_w, screen_h = self.stg['Screen Resolution']
