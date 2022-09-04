@@ -6,8 +6,10 @@
  - A question sampling method that focuses on questions you're answering wrong.
  - A way to store scores over multiple sessions (scores for an exercise are stored as json files with ID linking to the database)
  - The tool is more custimized towards English as the "language you know", but could work with other langauges.
+ - The tool detects the languages (language you know and language you want to learn) from the database.
  - A way to edit, delete, or add alternative translations when working with the app.
  - A way to visualize the score for a particular exercise.
+ - You can do exercises on small samples of a the database to memorize words one batch at a time.
  
  ## Installation and Usage
  Installing and using the app is easy (for someone comfortable with python at least):
@@ -31,8 +33,6 @@
  - Several exercises for nouns (female-to-male, singular-to-plural)
  - A custimaizable sampling strategy for choosing the questions.
  - Verb cojugations (this have some challenges, mainly seeing a good way for collecting and storing different verbs with their conjugation)
- - A way to summarize and visualize results for certain exercises
- - Fix some issues with the matching function (when evaluating answers)
  - A better design for the app, instead of the bland design used as of now.
  
  ## Collaboration Plea
