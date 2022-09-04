@@ -114,14 +114,14 @@ def matching(answer:str, target:str) -> bool:
     :param target: the correct answer
     :returns: True if the answer is matching else False
     """
-    correct_answers = re.split('[,;](?=[^,;]+?:)', clean_text(target))
-    for value in [get_all_valid_answers(x) for x in correct_answers]:
-        correct_answers += value
+    target_parts = re.split(',|;', clean_text(target))
+    correct_answers = []
+    for value in [get_all_valid_answers(x) for x in target_parts]:
+        correct_answers += [x.strip() for x in value if x.strip() not in correct_answers]
 
     answer = clean_text(answer)
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
-    print(answer, correct_answers)
-    return any([fuzz.ratio(answer, correct_answer.strip()) > 90 for correct_answer in correct_answers])
+    return any([fuzz.ratio(answer, correct_answer) > 90 for correct_answer in correct_answers])
 
 def get_all_valid_answers(sentences:Union[str, Iterable[str]], choices:Iterable[Tuple[str, Iterable[str]]]=[]):
     """
