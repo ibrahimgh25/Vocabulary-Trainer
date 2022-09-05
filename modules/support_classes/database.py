@@ -1,6 +1,7 @@
 import re
 import shutil, os, datetime
 import json, warnings
+from zoneinfo import available_timezones
 from modules.support_classes.scores import ScoresHandler
 
 
@@ -82,7 +83,8 @@ class DatabaseHandler():
             draws = np.random.choice(self.used_ids, p=weights, replace=False, size=n)
         else:
             draws = self.used_ids
-        indices = [np.where(self.used_ids==x)[0][0] for x in draws]
+        available_ids = self.lang_df['ID'].values
+        indices = [np.where(available_ids==x)[0][0] for x in draws]
         entries = [self.lang_df.loc[idx].to_dict() for idx in indices]
         output = []
         for entry in entries:
@@ -169,13 +171,13 @@ class DatabaseHandler():
         
         return query, target
     
-    def add_alternative_translation(self, id:int, translation:str, direction:str):
+    def add_alternative_translation(self, entry_id:int, translation:str, direction:str):
         ''' Add an alternative translation to specific word
             :param id: the id of the entry in the database
             :param translation: the alternative translation to add
             :param direction: the direction of the translation
         '''
-        idx = np.where(self.used_ids==id)[0][0]
+        idx = np.where(self.lang_df['ID'].values==entry_id)[0][0]
         assert direction in ['Forward', 'Backward']
         column = f'Alternative {direction}'
         if ';' in translation or ',' in translation:
@@ -193,18 +195,18 @@ class DatabaseHandler():
         # Delete the score for that entry too
         self.scores.remove_id(entry_id)
 
-        idx = np.where(self.used_ids==entry_id)[0][0]
+        idx = np.where(self.lang_df['ID'].values==entry_id)[0][0]
         self.lang_df.drop(int(idx), axis=0, inplace=True)
 
         self.used_ids = self.lang_df['ID'].values
         
-    def set_translation_target(self, idx:int, old_target:str, new_target:str):
+    def set_translation_target(self, entry_id:int, old_target:str, new_target:str):
         ''' Change the translation target of an entry
             :param ids: the id of the entry
             :param old_target: the old translation target (to determine which fields to change
             :param new_target: the new translation target (to replace the old one)
         '''
-        idx = np.where(self.used_ids==idx)[0][0]
+        idx = np.where(self.lang_df['ID'].values==entry_id)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
         for key, value in entry.items():
             if value == old_target:
@@ -218,12 +220,12 @@ class DatabaseHandler():
             :param excluded_categories: the categories to be sampled out (black filter)
         '''
         df = self.lang_df # Just to have a shorter code
+        self.used_ids = df['ID'].values
+
         matches_category = lambda x, cat: cat in df.loc[df['ID']==x, 'Category'].values[0]
         # Exclude the categories in excluded categories
         for cat in excluded_categories:
-            print(cat, len(self.used_ids))
             self.used_ids = [x for x in self.used_ids if not matches_category(x, cat)]
-            print(len(self.used_ids))
         # Include only the categories in included_categories
         for cat in included_categories:
             self.used_ids = [x for x in self.used_ids if matches_category(x, cat)]
