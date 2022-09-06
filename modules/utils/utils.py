@@ -51,24 +51,20 @@ def add_special_chars(answer:str) -> str:
         answer = answer.replace(char + '_', special_chars[char])
     return answer
 
-def delete_list_indecies(list:Iterable, indecies:Iterable[int]) -> Iterable:
-    """Deletes a list of indecies from a list.
-
-    :param list: the list to be trimmed
-    :param indecies: the list of indices to be removed 
-
+def delete_list_indices(arr:Iterable, indices:Iterable[int]) -> Iterable:
+    """Deletes a list of indices from a list
+    :param arr: the list to be trimmed
+    :param indices: the list of indices to be removed
     """
-    for index in sorted(indecies, reverse=True):
-        del list[index]
-    return list
+    for index in sorted(indices, reverse=True):
+        del arr[index]
+    return arr
 
 def show_sampling_distribution(low_score=-10, high_score=10, n_samples=10000) -> None:
-    """Plots the sampling disctribution given by normalize_weights, just for testing
-
+    """Plots the sampling distribution given by normalize_weights, just for testing
     :param low_score: the minimum score to show (Default value = -10)
     :param high_score: the maximum score to show (Default value = 10)
-    :param n_samples: the number of smaples to take (Default value = 10000)
-
+    :param n_samples: the number of samples to take (Default value = 10000)
     """
     # Make sure that low_score is smaller than high_score
     if low_score > high_score:
@@ -98,14 +94,14 @@ def generate_id(digits:int, existing_ids:Iterable[int]) -> int:
     # If not enough ids are available throw and error
     if len(existing_ids) > (10**digits)/2:
         raise Exception('generate_id: the number of ids to be generated can\'t be covered by the specified number of digits')
-    # For simpliciy the implementation is faster when the number of available ids is much larger than the number to be assigned
+    # For simplicity the implementation is faster when the number of available ids is much larger than the number to be assigned
     if len(existing_ids) > (10**digits)/100:
         warnings.warn('generate_id: the number of ids to be generated is close to the number of available ids, for better efficiency increase the number of digits')
-    # We have the proper gaurds above to not worry about an open loop
-    while(True):
-        id = int(10**digits * np.random.rand())
-        if id not in existing_ids:
-            return id
+    # We have the proper guards above to not worry about an open loop
+    while True:
+        random_id = int(10**digits * np.random.rand())
+        if random_id not in existing_ids:
+            return random_id
 
 def matching(answer:str, target:str) -> bool:    
     """
@@ -114,7 +110,7 @@ def matching(answer:str, target:str) -> bool:
     :param target: the correct answer
     :returns: True if the answer is matching else False
     """
-    target_parts = re.split(',|;', clean_text(target))
+    target_parts = re.split('[,;]', clean_text(target))
     correct_answers = []
     for value in [get_all_valid_answers(x) for x in target_parts]:
         correct_answers += [x.strip() for x in value if x.strip() not in correct_answers]
@@ -128,7 +124,7 @@ def get_all_valid_answers(sentences:Union[str, Iterable[str]], choices:Iterable[
     Decomposes an answer to all possible implied answers
     :param sentences: a list of valid answers
     :param choices:  the tuple the function got so far, it contains the 
-     word and the possible replacementsused by the funtion to guide recursion
+     word and the possible replacements used by the function to guide recursion
     :returns: a list of strings containing the valid answers
     """
     if isinstance(sentences, str):
@@ -149,7 +145,7 @@ def clean_text(text):
     """  Cleans a string of text for better matching here is a list of what it does:
         - Replace 's and 're with is and are
         - Replace won't, wouldn't and don't... with will not would not and will not...
-        - Remove punctiation
+        - Remove punctuation
         - Remove anything between brackets "()"
         - Change to lower case
         - Remove articles (a, an, and the)
@@ -165,20 +161,20 @@ def clean_text(text):
 
     for key, replacement in pairs2replace.items():
         text = re.sub(key, replacement, text)
-    # Replace all the "not" abreviations, e.g. doesn't -> doesn not
+    # Replace all the "not" abbreviations, e.g. doesn't -> does not
     regex = re.compile(r"\b[A-Za-z]+n't\b")
     matches = re.findall(regex, text)
     for match in matches:
         replacement = match.replace("n't", " not")
         text = text.replace(match, replacement)
-    # Remove everything between paranethesis
+    # Remove everything between parenthesis
     text = re.sub(r"\([^()]*\)", '', text)
     pattern = '|'.join(f'^{x}\s|\s{x}\s' for x in ['a', 'an', 'the'])
     text = re.sub(pattern, ' ', text)
     return text.strip()
 
 def detect_language(text:Union[Iterable, str], lang_mapping_file:str='resources/lang_codes.json'):
-    ''' Detects the language of a list of texts or a string of texts'''
+    """ Detects the language of a list of texts or a string of texts"""
     if isinstance(text, Iterable):
         text = ' '.join(text)
     lang_code = detect(text)
@@ -187,4 +183,4 @@ def detect_language(text:Union[Iterable, str], lang_mapping_file:str='resources/
         lang_mapping = json.load(f)
     if lang_code in lang_mapping.keys():
         return lang_mapping[lang_code]
-    return 'Target' # If the language code isn't found return a place holder
+    return 'Target' # If the language code isn't found return a placeholder

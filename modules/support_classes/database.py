@@ -1,13 +1,10 @@
 import re
 import shutil, os, datetime
-import json, warnings
-from zoneinfo import available_timezones
-from modules.support_classes.scores import ScoresHandler
-
+import warnings
 
 import numpy as np
 
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Tuple, Union, Any
 from ..utils import ( 
                     generate_id, 
                     sample_entry, 
@@ -17,14 +14,15 @@ from ..utils.excel_ops import get_excel_df, save_to_excel
 
 from .scores import ScoresHandler
 
-class DatabaseHandler():
+class DatabaseHandler:
     """ This class handles loading, saving, and sampling from the database of vocabulary"""
     def __init__(self, excel_file, sheet_name):
+        self.lang_df = None
         self.load_df(excel_file, sheet_name)
         # define a private attribute to store the direction
         # of the training session
         
-        # Define the avialable for IDs
+        # Define the available for IDs
         self.used_ids = self.lang_df['ID'].values
 
         # Define the ScoreHandler instance
@@ -32,8 +30,8 @@ class DatabaseHandler():
 
     def load_df(self, excel_file:str, sheet_name:str) -> None:
         """
-        Loads the dataframe contianing the vocabulary to be used
-        :param excel_file: the path to the excel file
+        Loads the dataframe containing the vocabulary to be used
+        :param Excel_file: the path to the Excel file
         :param sheet_name: the name of the sheet containing the data
         """
         self.lang_df = get_excel_df(excel_file, sheet_name)
@@ -54,7 +52,7 @@ class DatabaseHandler():
         :param answer: the user answer
         :param exercise: the name of the exercise (will be used to access the scores)
         :returns: True if the answer is right False otherwise
-        Note: the function automtically updates the scores using the ID in entry and the
+        Note: the function automatically updates the scores using the ID in entry and the
          exercise name
         """
         # Handle for special characters that you're too lazy to type (like: Ö)
@@ -67,13 +65,14 @@ class DatabaseHandler():
         return result
             
     
-    def sample_questions(self, exercise:str, single_query:bool=False, n:int=1) -> dict:
+    def sample_questions(self, exercise:str, single_query:bool=False, n:int=1) -> dict[str, str | Any] | list[
+        dict[str, str | Any]]:
         """
         Sample a question for a specific exercise
         :param exercise: the name of the exercise
         :param single_query: if True, a single word is arbitrary chosen as the question, e.g.,
          instead of "nice, beautiful, pretty" the question could be "pretty"
-        :param n: number of smaples produced, when more than 1 is needed we return only the ids
+        :param n: number of samples produced, when more than 1 is needed we return only the ids
         :returns: a dictionary with the following form:
          {'question':question_text, 'ID':id, 'target':target}
         """
@@ -90,11 +89,11 @@ class DatabaseHandler():
         for entry in entries:
             # RENAME THIS
             query, target = self.formulate_translation_question(entry, exercise.split()[0])
-            # If a single query is required, remove the paranthesis and choose a random word
+            # If a single query is required, remove the parenthesis and choose a random word
             # for asking
             if single_query:
                 query = re.sub(r'\([^)]*\)', '', query)
-                query = np.random.choice(re.split(',|;', query)).strip()
+                query = np.random.choice(re.split('[,;]', query)).strip()
             output.append({'question':query, 'ID':entry['ID'], 'target':target})
         
         if n == 1:
@@ -102,11 +101,11 @@ class DatabaseHandler():
         return output
 
     def save_database(self, excel_file:Union[str, os.PathLike], sheet_name:str, save_scores:bool=True) -> None:
-        """Save the database to an excel file
-
-        :param excel_file: the name of the excel file
+        """
+        Save the database to an Excel file
+        :param Excel_file: the name of the Excel file
         :param sheet_name: the sheet name used for saving
-        :param save_scores: if True the scores in self.scores will be saved too
+        :param save_scores: if True the scores from "self.scores" will be saved too
         """
         save_to_excel(self.lang_df, excel_file, sheet_name)
         if save_scores:
@@ -115,8 +114,8 @@ class DatabaseHandler():
     def get_matching_indices(self, category:str) -> Iterable[int]:
         """
         Returns the indices of rows matching a specific category
-        :param category: string contianing the category used for filtering
-        :returns: the list of mathcing indices
+        :param category: string containing the category used for filtering
+        :returns: the list of matching indices
         """
         categories = self.lang_df['Category'].unique()
         categories = [x for x in categories if category in x]
@@ -124,14 +123,12 @@ class DatabaseHandler():
         return indices
 
     def backup_database(self, excel_file:Union[str, os.PathLike], add_timestamp:bool=True):
-        """Backup the database to a backup path
-
-        :param excel_file: 
+        """
+        Backup the database to a backup path
+        :param Excel_file: 
         :param add_timestamp:  (Default value = True)
-
         """
         # Copy the database to a backup file
-        back_up_path = excel_file.replace('.xlsx', '_backup.xlsx')
         file_name = os.path.basename(excel_file)
 
         if add_timestamp:
@@ -148,10 +145,10 @@ class DatabaseHandler():
     
     def formulate_translation_question(self, entry:dict, direction:str)->Tuple[str, str]:
         """
-        Formulatest the translation question and answer for a database row
+        Formulate the translation question and answer for a database row
         :param entry: dictionary created from the database row
         :param direction: the direction of translation
-        :returns: a tuple contianing the question and the target
+        :returns: a tuple containing the question and the target
         """
         target_keys = ['Translation', 'Translation_f']
         query_keys = ['Word_s', 'Word_p', 'Word_fs', 'Word_fp']
@@ -172,16 +169,16 @@ class DatabaseHandler():
         return query, target
     
     def add_alternative_translation(self, entry_id:int, translation:str, direction:str):
-        ''' Add an alternative translation to specific word
-            :param id: the id of the entry in the database
+        """ Add an alternative translation to specific word
+            :param entry_id: the id of the entry in the database
             :param translation: the alternative translation to add
             :param direction: the direction of the translation
-        '''
+        """
         idx = np.where(self.lang_df['ID'].values==entry_id)[0][0]
         assert direction in ['Forward', 'Backward']
         column = f'Alternative {direction}'
         if ';' in translation or ',' in translation:
-            warnings.warn(f'{translation} contains an invalid character, ingoring the command')
+            warnings.warn(f'{translation} contains an invalid character, ignoring the command')
             return False
         # If there's already an alternative translation separate the new entry with a ';'
         if self.lang_df[column].values[idx] != '':
@@ -191,7 +188,7 @@ class DatabaseHandler():
         return True
     
     def delete_entry(self, entry_id:int):
-        ''' Delete a specific entry in the database'''
+        """ Delete a specific entry in the database"""
         # Delete the score for that entry too
         self.scores.remove_id(entry_id)
 
@@ -201,11 +198,11 @@ class DatabaseHandler():
         self.used_ids = self.lang_df['ID'].values
         
     def set_translation_target(self, entry_id:int, old_target:str, new_target:str):
-        ''' Change the translation target of an entry
-            :param ids: the id of the entry
+        """ Change the translation target of an entry
+            :param entry_id: the id of the entry
             :param old_target: the old translation target (to determine which fields to change
             :param new_target: the new translation target (to replace the old one)
-        '''
+        """
         idx = np.where(self.lang_df['ID'].values==entry_id)[0][0]
         entry = self.lang_df.loc[idx].to_dict()
         for key, value in entry.items():
@@ -213,16 +210,16 @@ class DatabaseHandler():
                 self.lang_df.loc[self.lang_df.index==idx, key] = new_target
     
     def apply_filter(self, exercise:str, n_samples:int=0, included_categories:Iterable[str]=[], excluded_categories:Iterable[str]=[]):
-        ''' Apply a filter to the available questions
+        """ Apply a filter to the available questions
             :param exercise: the name of the exercise to use for getting the weights when sampling
             :param n_samples: the number of samples to be set in the final filtering
             :param included_categories: the categories to be sampled in (white filter)
             :param excluded_categories: the categories to be sampled out (black filter)
-        '''
+        """
         df = self.lang_df # Just to have a shorter code
         self.used_ids = df['ID'].values
 
-        matches_category = lambda x, cat: cat in df.loc[df['ID']==x, 'Category'].values[0]
+        matches_category = lambda x, category: category in df.loc[df['ID']==x, 'Category'].values[0]
         # Exclude the categories in excluded categories
         for cat in excluded_categories:
             self.used_ids = [x for x in self.used_ids if not matches_category(x, cat)]
@@ -235,7 +232,7 @@ class DatabaseHandler():
             self.used_ids = [x['ID'] for x in sampled_entries]
             
     def get_scores_summary(self, exercise):
-        ''' Return the score summary for a particular exercise'''
+        """ Return the score summary for a particular exercise"""
         summary = self.scores.summarize(exercise)
         # Replace the ids by their names
         ids = self.lang_df['ID'].values

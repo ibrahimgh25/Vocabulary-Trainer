@@ -1,6 +1,6 @@
 import numpy as np
 def rel2abs(rel_values, ref):
-    ''' Change relative coordinates to aboslute coordinates'''
+    """ Change relative coordinates to absolute coordinates"""
     if isinstance(rel_values, list):
         if len(rel_values) == 4:
             ref = ref + ref

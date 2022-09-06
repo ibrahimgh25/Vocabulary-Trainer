@@ -2,7 +2,6 @@ import json, os
 
 import warnings
 from modules.support_classes.pygame_menu import PygameMenu
-import pygame_menu
 
 from pygame_menu.examples import create_example_window
 
@@ -37,12 +36,14 @@ class SettingsHandler(dict):
             with open(self.path, 'r') as f:
                 settings = json.load(f)
             self._copy_settings_from_dict(settings)
-        except:
-            warnings.warn('Failed to recover setttings file. Restoring to default settings.')
+        except FileNotFoundError:
+            warnings.warn('Failed to recover settings file. Restoring to default settings.')
             self.restore_default_settings()
     
-    def settings_menu(self, screen):
-        screen = create_example_window('Settings', self['Screen Resolution'])
+    def settings_menu(self, screen=None):
+        # FIXME: this still doesn't work, all the program will migrate to pygame_menu for menus
+        if not screen:
+            screen = create_example_window('Settings', self['Screen Resolution'])
         settings_menu = PygameMenu('Main Menu', self['Screen Resolution'],
                                     (0.8, 0.7), 'Settings')
         
@@ -53,12 +54,12 @@ class SettingsHandler(dict):
         settings_menu.add.toggle_switch('Full Screen', self['Full Screen'],
                                 toggleswitch_id='full_screen')
 
-        text_secions = [('Included Categories', self['Included Categories']),
-                        ('Excluded Categoreis', self['Excluded Categories']),
+        text_sections = [('Included Categories', self['Included Categories']),
+                        ('Excluded Categories', self['Excluded Categories']),
                         ('Path to Excel File', self['Database']),
                         ('Sheet name', self['Excel Sheet'])]
         
-        for name, default_value in text_secions:
+        for name, default_value in text_sections:
             settings_menu.add_text_input(name, default_value)
 
         settings_menu.add.button('Open Database', self.open_db, button_id='open_db')  # Call function

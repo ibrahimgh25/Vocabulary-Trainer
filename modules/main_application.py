@@ -7,6 +7,24 @@ from typing import Iterable, Tuple, Optional
 
 from .support_classes import SettingsHandler, DatabaseHandler
 from .utils import rel2abs, detect_language
+
+
+def get_matching_area(options:Iterable[Tuple]):
+    """
+    calculates which option a mouse click matches
+    :param options: a list of tuples representing all the options in the page, has the form [(option_name, option_rect), ...]
+    :returns: name of the matched option, if no option was matched it returns ''
+    """
+    x, y = pygame.mouse.get_pos()
+    for option in options:
+        rect = option[1]
+        matching_x = rect[0] < x < rect[0] + rect[2]
+        matching_y = rect[1] < y < rect[1] + rect[3]
+        if matching_x and matching_y:
+            return option[0]
+    return ''
+
+
 class TrainerApp:
     """ This class contains the main application that will handle the front-end, it will also control the back-end
          class (QuestionHandler)"""
@@ -21,7 +39,7 @@ class TrainerApp:
         self.status = 'reset'
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
-        # Detect the target and source languages so they can be used in the exercise names
+        # Detect the target and source languages, so they can be used in the exercise names
         self.target_lang = detect_language(self.db_handler.lang_df['Word_s'])
         self.source_lang = detect_language(self.db_handler.lang_df['Translation'])
         # A dictionary to map the option name with the corresponding exercise
@@ -60,21 +78,21 @@ class TrainerApp:
         pygame.draw.rect(self.screen, bgcolor, rect, 2)
         
         font = pygame.font.Font(None, fsize)
-        text = font.render(msg, 1,fgcolor)
+        text = font.render(msg, True,fgcolor)
         center = (rect[0] + rect[2]//2, rect[1] + rect[3]//2)
         text_rect = text.get_rect(center=center)
         self.screen.blit(text, text_rect)
         pygame.display.update()   
     
-    def add_options(self, options:Iterable[str], dimensions:dict)->tuple:
+    def add_options(self, options:Iterable[str], dimensions:dict)->Iterable[tuple]:
         """
         Add a list of options to a screen
         :param options: a list of strings containing the name of the options
-        :params dimensions: dictionary contining the rel (in %) dimensions of the options
+        :param dimensions: dictionary containing the rel (in %) dimensions of the options
          it should contain the following keys: 
          - rel_y: the starting y relative to the height
          - rel_x: the starting x relative to the width
-         - rel_w and rel_h: relative heights and widths of each options
+         - rel_w and rel_h: relative heights and widths of each option
          - rel_gap: the gap between two options
         :returns: a list of tuple with each element as follows (option_name, option_rect)
         """
@@ -97,7 +115,7 @@ class TrainerApp:
     
 
     def load_images(self):
-        ''' Load and reshape the images used by the app'''
+        """ Load and reshape the images used by the app"""
         img_size, resource_dir = self.stg['Screen Resolution'], self.resource_dir
         self.home_img = pygame.image.load(f'{resource_dir}/main_menu.jpg')
         self.home_img = pygame.transform.scale(self.home_img, img_size)
@@ -127,7 +145,7 @@ class TrainerApp:
         return self.get_user_option(options)
 
     def choose_exercise(self):
-        ''' Choose an exercise to either display its score or practice it'''
+        """ Choose an exercise to either display its score or practice it"""
         self.reset_screen(self.home_img)
         options = list(self.exercises.keys())
         dimensions = {'rel_y':29, 'rel_x':5, 'rel_w':35, 'rel_h':10, 'rel_gap':1.6}
@@ -137,30 +155,15 @@ class TrainerApp:
         
     
     def get_user_option(self, options):
-        ''' Returns what option the user chooses on a given screen'''
-        while(True):
+        """ Returns what option the user chooses on a given screen"""
+        while True:
             event = pygame.event.wait()
             self.handle_for_repeating_events(event)
             if event.type == pygame.MOUSEBUTTONUP:
-                matching_area = self.get_matching_area(options)
+                matching_area = get_matching_area(options)
                 if matching_area != '':
                     return matching_area
 
-    def get_matching_area(self, options:Iterable[Tuple]):
-        """
-        calculates which option a mouse click matches
-        :param options: a list of tuples representing all the options in the page, has the form [(option_name, option_rect), ...]
-        :returns: name of the matched option, if no option was matched it returns ''
-        """
-        x, y = pygame.mouse.get_pos()
-        for option in options:
-            rect = option[1]
-            matching_x = x > rect[0] and x < rect[0] + rect[2]
-            matching_y = y > rect[1] and y < rect[1] + rect[3]
-            if matching_x and matching_y:
-                return option[0]
-        return ''
-        
     def get_answer(self, question:str):
         """
         Displays a question on the screen and saves the answer provided by the user in self.user_answer
@@ -182,7 +185,7 @@ class TrainerApp:
     
             # update the text of user input
             self.draw_text(self.user_answer, rect=items[1][1], bgcolor=(237,125,49))
-            
+            # TODO: If will still use this method, turn it into a function
             for event in pygame.event.get():
                 self.handle_for_repeating_events(event)
                 if event.type == pygame.KEYDOWN:
@@ -198,15 +201,15 @@ class TrainerApp:
                                 pass
                        
 
-    def display_question_results(self, correct_answer:str, answered_correctly:bool, question_idx:int, direction:int)->Optional[int]:
+    def display_question_results(self, correct_answer:str, answered_correctly:bool, question_idx:int, direction:str)->Optional[int]:
         """
         Displays the results for a question on the screen
-        :param correct_answer: the correct answer to the question, diplayed below the answer given by the user
+        :param correct_answer: the correct answer to the question, displayed below the answer given by the user
         :param answered_correctly: whether the user answered the question correctly
         :param question_idx: the index of the question in the vocabulary database, to be used when the user wants to
          update the target
         :param direction: the direction of the exercise, to be used when updating or adding translations
-        :returns: 0 if the escape key was pressed, 1 if "enter" or "space' where pressed
+        :returns: 0 if the escape key was pressed, 1 if "enter" or "space" where pressed
         """
         if answered_correctly:
             bgcolor = (0, 0, 255)
@@ -222,7 +225,7 @@ class TrainerApp:
         options = self.calculate_rect_placements(item_names, dims, horizontal=True)
         self.add_items_to_screen(options)
 
-        while(True):
+        while True:
             event = pygame.event.wait()
             self.handle_for_repeating_events(event)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_SPACE, pygame.K_RETURN] :
@@ -230,7 +233,7 @@ class TrainerApp:
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return 0
             elif event.type == pygame.MOUSEBUTTONUP:
-                option = self.get_matching_area(options)
+                option = get_matching_area(options)
                 if option == 'Add Alternative Translation' and not answered_correctly:
                     self.db_handler.add_alternative_translation(question_idx, self.user_answer, direction)
                     self.draw_text(correct_answer, rect=self.target_area, bgcolor=(220, 220, 0))
@@ -271,9 +274,9 @@ class TrainerApp:
         pygame.display.update()
     
     def handle_for_repeating_events(self, event):
-        ''' Monitors if the user wants to exist or resized the window.
+        """ Monitors if the user wants to exist or resized the window.
             :returns: True if the event was resizing, else False
-        '''
+        """
         if event.type == pygame.QUIT:
             self.quit()
         if event.type == pygame.VIDEORESIZE:
@@ -292,13 +295,13 @@ class TrainerApp:
     
     def main_loop(self):
         """ The main loop of the application"""
-        while(True):
+        while True:
             option = self.start()
             if option == 'Practice':
                 exercise = self.choose_exercise()
                 if exercise == 'Back':
                     continue
-                while(True):                    
+                while True:
                     single_query = (exercise == 'Forward Translate') # We use single query if translating from target only
                     entry = self.db_handler.sample_questions(exercise, single_query)
                     answer = self.get_answer(entry['question'])
@@ -321,18 +324,18 @@ class TrainerApp:
             elif option == 'Exit':
                 self.quit()
     
-    def calculate_rect_placements(self, item_names:Iterable[str], dimensions:dict, horizontal:bool=False)->tuple:
+    def calculate_rect_placements(self, item_names:Iterable[str], dimensions:dict, horizontal:bool=False)->Iterable[tuple]:
         """
         Calculates equidistant placements for objects on a screen
         :param item_names: a list of strings containing the name of the items to be added
          to assign a type to an item you could add it after a '|', e.g. "Start|TextArea"
-        :params dimensions: dictionary contining the rel (in %) dimensions of the items
+        :param dimensions: dictionary containing the rel (in %) dimensions of the items
          it should contain the following keys: 
          - rel_y: the starting y relative to the height
          - rel_x: the starting x relative to the width
          - rel_w and rel_h: relative heights and widths of each item
          - rel_gap: the gap between two item
-        :params horizontal: if true, the items are placed horizontally (right-to-left) else
+        :param horizontal: if true, the items are placed horizontally (right-to-left) else
          the items are placed vertically (top-to-bottom)
         :returns: a list of tuple with each element as follows (item_name, item_rect, item_type)
         """
@@ -354,12 +357,12 @@ class TrainerApp:
             current_x += gap_h
         return output
     
-    def add_items_to_screen(self, items:Iterable[str], fgcolor=(19, 161, 14), bgcolor=(255, 255, 255))->None:
+    def add_items_to_screen(self, items:Iterable[tuple], fgcolor=(19, 161, 14), bgcolor=(255, 255, 255))->None:
         """
         Adds a list of items to a screen
-        :param items: a list of strings containing the name of the items, each element should
+        :param items: a list of tuples containing the name of the items, each element should
          have the following form (name, (x, y, w, h), type), an empty type is treated as a rectangle
-        :param fgcolor: the color of the forground (text)
+        :param fgcolor: the color of the foreground (text)
         :param bgcolor: the color of the background
         :returns: a list of tuple with each element as follows (item_name, item_rect)
         """
@@ -368,8 +371,8 @@ class TrainerApp:
             self.draw_text(item[0], rect=item[1], fsize=fsize, fgcolor=fgcolor, bgcolor=bgcolor)
     
     def show_scores_summary(self, exercise:str):
-        ''' Displays a page with a summary of the scores for a particular exercise'''
-        # LATER SHOULD BE CHANGED TO A BETTER IMPLMENTATION
+        """ Displays a page with a summary of the scores for a particular exercise"""
+        # TODO: LATER SHOULD BE CHANGED TO A BETTER IMPLEMENTATION
         summary = self.db_handler.get_scores_summary(exercise)
         self.screen.fill((0, 0, 0))
         screen_w, screen_h = self.stg['Screen Resolution']
@@ -389,17 +392,17 @@ class TrainerApp:
         dims = {'rel_y':15, 'rel_x':10, 'rel_w':80, 'rel_h':8, 'rel_gap':2}
         placements = self.calculate_rect_placements(item_names, dims)
         # Change the placements of the first and teh last element to be at the same vertical level
-        x, y, w, h = placements[0][1]
-        placements[0] = (placements[0][0], [x, y, int(0.45*w), h], '')
-        placements[-1] = (placements[-1][0], [int(0.55*w) + x, y, int(0.45*w), h], '')
+        x, frequencies, w, h = placements[0][1]
+        placements[0] = (placements[0][0], [x, frequencies, int(0.45*w), h], '')
+        placements[-1] = (placements[-1][0], [int(0.55*w) + x, frequencies, int(0.45*w), h], '')
         
         self.add_items_to_screen(placements)
 
         # Draw graph showing the distribution
-        X = [x for x, _ in summary['distribution'].items()]
-        y = [y for _, y in summary['distribution'].items()]
+        score = [x for x, _ in summary['distribution'].items()]
+        frequencies = [y for _, y in summary['distribution'].items()]
         plt.clf()
-        plt.bar(X, y)
+        plt.bar(score, frequencies)
 
         plt.xticks(color='white')
         plt.yticks(color='white')
@@ -418,7 +421,8 @@ class TrainerApp:
         im = pygame.transform.scale(im, rect[2:])
         self.screen.blit(im, rect[:2])
         pygame.display.update()
-        while(True):
+        # FIXME: Fix a bug where the screen requires a click before going back
+        while True:
             event = pygame.event.wait()
             self.handle_for_repeating_events(event)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:

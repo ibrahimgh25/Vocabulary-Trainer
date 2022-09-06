@@ -12,11 +12,11 @@ from openpyxl.styles import PatternFill, NamedStyle
 
 
 def get_excel_df(excel_file:str, sheetname:Optional[str]=None) -> pd.DataFrame:
-    """Reads an excel sheet with formulas and return the dataframe.
-
-    :param excel_file: path to excel file
+    """
+    Reads an Excel sheet with formulas and return the dataframe
+    :param excel_file: path to Excel file
     :param sheetname: name of the sheet to read (default: None)
-    :returns: dataframe found in the excel sheet
+    :returns: dataframe found in the Excel sheet
 
     """
     wb = load_workbook(excel_file)
@@ -25,17 +25,17 @@ def get_excel_df(excel_file:str, sheetname:Optional[str]=None) -> pd.DataFrame:
     else:
         sheet = wb[sheetname]
     df = pd.DataFrame(sheet.values)
-    # Chaneg the columns names to the first row
+    # Get the column names from the first row
     df.columns = df.iloc[0]
     # Delete the first row
     df = df.iloc[1:].fillna('')
     return df.reset_index(drop=True)
 
 def style_dict(header_style:str, body_style:str) -> dict[str, str]:
-    """Just returns a dictionary with the entered_styles
-
-    :param s: header_style: the name of the header style
-    :param s: body_style: the name of the body style
+    """
+    Just returns a dictionary with the entered_styles
+    :param header_style: the name of the header style
+    :param body_style: the name of the body style
     :returns: a dictionary with the header and body styles
 
     """
@@ -45,18 +45,18 @@ def style_dict(header_style:str, body_style:str) -> dict[str, str]:
     return {'Header':header_style, 'Body':body_style}
 
 def find_style(style_name:str) -> Union[NamedStyle, str]:
-    """Returns a cell style based on the name
-
-    :param s: style_name: the name of the needed style
-    :returns: an openpyxl.styles.NamedStyle configured according to the name, if the name doesn't exist,
-         it returns the name itself
+    """
+    Returns a cell style based on the name
+    :param style_name: the name of the needed style
+    :returns: an openpyxl.styles.NamedStyle configured according to the name, if the name doesn't exist, it returns the 
+     name itself
 
     """
     dark_blue = '00002060'
     black = '00000000'
     white = '00FFFFFF'
     pure_blue = '000000FF'
-    # I know this is a premitive way of doing it, but it's easy
+    # I know this is a primitive way of doing it, but it's easy
     style = NamedStyle(name=style_name)
     if style_name == 'BlueHeaderCentered':
         # This style has all borders white and thick, dark blue fill, white-bold font
@@ -93,10 +93,9 @@ def find_style(style_name:str) -> Union[NamedStyle, str]:
         return style_name
 
 def add_styles(wb:Workbook)->Workbook:
-    """Adds two custom styles to a workbook
-    Parameters:
-
-    :param s: wb: the workbook to add the styles to 
+    """
+    Adds two custom styles to a workbook
+    :param wb: the workbook to add the styles to
     :returns: the workbook with the styles added
 
     """
@@ -110,8 +109,8 @@ def add_styles(wb:Workbook)->Workbook:
     return wb
 
 def all_borders(line_style:NamedStyle, color:str='00000000') -> Border:
-    """Returns a border with all sides at the specified type and color
-
+    """
+    Returns a border with all sides at the specified type and color
     :param line_style: the style of the border
     :param color: the HEX color of the border  (Default black)
 
@@ -121,8 +120,8 @@ def all_borders(line_style:NamedStyle, color:str='00000000') -> Border:
     return border
     
 def adjust_column_width(ws:Worksheet, col_index:int, width:int) -> Worksheet:
-    """Adjusts the widths of the a column in a worksheet
-
+    """
+    Adjusts the widths of a column in a worksheet
     :param ws: the worksheet containing the column
     :param col_index: the index of the column
     :param width: the required width for the column
@@ -138,17 +137,18 @@ def adjust_column_width(ws:Worksheet, col_index:int, width:int) -> Worksheet:
     return ws
 
 def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[dict]=None, dims:Iterable[int]=None):
-    """Saves a dataframe in an excel sheet with specified styles
-
+    """
+    Saves a dataframe in an Excel sheet with specified styles
     :param df: the dataframe to save
-    :param filename: path to the excel file
+    :param filename: path to the Excel file
     :param sheet_name: the sheet name
     :param styles: list containing the styles to be applied for every column
+    :param dims: the width of each column in Excel
     Note: if the function fails, it'll give you an opportunity to close the file and retry again, this helped
-     me a lot when testing so I am leaving it
+     me a lot when testing, so I am leaving it
 
     """
-    # Try to load the exising workbook into a file
+    # Try to load the existing workbook into a file
     try:
         wb = load_workbook(filename)
         existing_sheets = wb.sheetnames
@@ -164,7 +164,7 @@ def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[d
         wb = Workbook()
         ws = wb.active
         ws.title = sheet_name
-    # Hide the gridlines from the excel sheet
+    # Hide the gridlines from the Excel sheet
     ws.sheet_view.showGridLines = False
     # Copy the dataframe rows to the worksheet
     for r in dataframe_to_rows(df, index=False, header=True):
@@ -175,7 +175,7 @@ def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[d
     if styles:
         # Make sure each column is assigned a style
         assert len(styles) == len(df.columns), len_match_err.format("styles")
-        # Iterate over each column and apply styling seperatly
+        # Iterate over each column and apply styling separately
         for col_nb, col in enumerate(ws.iter_cols()):
             for row_nb, cell in enumerate(col):
                 # If row_nb==0 then we're at the header
@@ -183,7 +183,7 @@ def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[d
                     cell.style = styles[col_nb]['Header']
                 else:
                     cell.style = styles[col_nb]['Body']
-    # Apply column widths if they where given
+    # Apply column widths if they were given
     if dims:
         # Make sure each column is assigned a width
         assert len(dims) == len(df.columns), len_match_err.format("assigned widths")
@@ -191,29 +191,27 @@ def df_to_excel(df:pd.DataFrame, filename:str, sheet_name:str, styles:Iterable[d
         for index, _ in enumerate(ws.iter_cols()):
             ws = adjust_column_width(ws, index, dims[index])
     # The following block is for saving the workbook, the try block is only for when the file 
-    # we're trying to save to is open, this happens a lot to me in testing so I added the try
+    # we're trying to save to is open, this happens a lot to me in testing, so I added the try
     # block
     try:
         wb.save(filename)
-    except PermissionError as e:
+    except PermissionError:
         print(filename, " may be still open, please close and press any key to try again")
         os.system("pause")
         wb.save(filename)
 
 
 def save_to_excel(df:pd.DataFrame, filename:str, sheetname:str) -> None:
-    """Saves the language dataframe to an excel file
-    Parameters:
-
+    """
+    Saves the language dataframe to an Excel file
     :param df: the dataframe to save
-    :param filename: the path of hte excel file to save under 
+    :param filename: the path of hte Excel file to save under 
     :param sheetname: the sheet name of the saved database
-
     """
     # Create a list of dictionaries with the styles for each column
     styles = [{'Header':'BlueHeaderCentered', 'Body':'BodyLeft'}] * len(df.columns)
     # Create a list of widths for each column
     # Create a list of widths with length of 10
     dims = [0] * len(df.columns)
-    # Save the dataframe to an excel file
+    # Save the dataframe to an Excel file
     df_to_excel(df, filename, sheetname, styles, dims)

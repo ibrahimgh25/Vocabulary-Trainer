@@ -55,12 +55,12 @@ class ScoresHandler(dict):
             self[exercise]['scores'][id] -= 1
     
     def get_weights(self, exercise:str, ids:Iterable[Union[int, str]]=[]):
-        ''' Returns a list of weights for given ids
+        """ Returns a list of weights for given ids
             :param exercise: the name of the exercise used for the scores
             :param ids: the list of ids included in the sampling process, if empty
              the scores are not filtered
             :returns: a list of numbers between 0 and 1 corresponding to the weights
-             of the input ids'''
+             of the input ids"""
         if len(ids) > 0:
             scores = [self[exercise]['scores'][str(x)] for x in ids]
         else:
@@ -68,12 +68,12 @@ class ScoresHandler(dict):
         return normalize_weights(list(scores))
     
     def remove_id(self, id:Union[str, int]):
-        ''' Delete all the scores for a given id'''
+        """ Delete all the scores for a given id"""
         for exercise in self.keys():
             self[exercise]['scores'].pop(str(id))
     
     def summarize(self, exercise:str):
-        ''' Return a summary to describe certain scores'''
+        """ Return a summary to describe certain scores"""
         scores = list(self[exercise]['scores'].values())
         ids = list(self[exercise]['scores'].keys())
 
