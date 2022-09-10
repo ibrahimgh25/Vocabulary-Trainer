@@ -3,13 +3,13 @@ import sys, io
 import matplotlib.pyplot as plt
 
 from PIL import Image
-from typing import Iterable, Tuple, Optional
+from typing import List, Tuple, Optional
 
 from .support_classes import SettingsHandler, DatabaseHandler
 from .utils import rel2abs, detect_language
 
 
-def get_matching_area(options:Iterable[Tuple]):
+def get_matching_area(options:List[Tuple]):
     """
     calculates which option a mouse click matches
     :param options: a list of tuples representing all the options in the page, has the form [(option_name, option_rect), ...]
@@ -89,7 +89,7 @@ class TrainerApp:
         self.screen.blit(text, text_rect)
         pygame.display.update()   
     
-    def add_options(self, options:Iterable[str], dimensions:dict)->Iterable[tuple]:
+    def add_options(self, options:List[str], dimensions:dict)->List[tuple]:
         """
         Add a list of options to a screen
         :param options: a list of strings containing the name of the options
@@ -257,7 +257,7 @@ class TrainerApp:
     
     def handle_for_repeating_events(self, event,
                             collected_text: Optional[str] = None,
-                            options: Optional[Iterable[str]] = None) -> Optional[str]:
+                            options: Optional[List] = None) -> Optional[str]:
         """
             Monitors if the user wants to exist or resized the window
             :param event: the event to be processed
@@ -324,7 +324,7 @@ class TrainerApp:
             elif option == 'Exit':
                 self.quit()
     
-    def calculate_rect_placements(self, item_names:Iterable[str], dimensions:dict, horizontal:bool=False)->Iterable[tuple]:
+    def calculate_rect_placements(self, item_names:List[str], dimensions:dict, horizontal:bool=False)->List[tuple]:
         """
         Calculates equidistant placements for objects on a screen
         :param item_names: a list of strings containing the name of the items to be added
@@ -357,7 +357,7 @@ class TrainerApp:
             current_x += gap_h
         return output
     
-    def add_items_to_screen(self, items:Iterable[tuple], fgcolor=(19, 161, 14), bgcolor=(255, 255, 255))->None:
+    def add_items_to_screen(self, items:List[tuple], fgcolor=(19, 161, 14), bgcolor=(255, 255, 255))->None:
         """
         Adds a list of items to a screen
         :param items: a list of tuples containing the name of the items, each element should

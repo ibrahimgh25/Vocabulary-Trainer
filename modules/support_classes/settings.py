@@ -13,8 +13,8 @@ class SettingsHandler(dict):
     def __init__(self, resource_dir, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = f'{resource_dir}/settings.json'
-        self._get_settings()
         self.settings_menu = None
+        self._get_settings()
         self.settings_restored = False
     
     def restore_default_settings(self):
@@ -22,7 +22,7 @@ class SettingsHandler(dict):
         self.save_settings(DEFAULT_SETTINGS)
         self._copy_settings_from_dict(DEFAULT_SETTINGS)
         if self.settings_menu is not None:
-            self.settings_menu._exit()
+            # FIXME: Figure out how to exit or change the value after the settings are returned to default
             self.settings_restored = True
 
 
@@ -51,7 +51,7 @@ class SettingsHandler(dict):
         # FIXME: this still doesn't work, all the program will migrate to pygame_menu for menus
         if not screen:
             screen = create_example_window('Settings', self['Screen Resolution'])
-        settings_menu = PygameMenu('Main Menu', self['Screen Resolution'],
+        settings_menu = PygameMenu('Settings Menu', self['Screen Resolution'],
                                     (0.8, 0.7), 'Settings')
         
         w, h = self['Screen Resolution']
@@ -83,7 +83,7 @@ class SettingsHandler(dict):
             self[key] = value
 
     def update_settings_from_menu(self, menu_data):
-        if self.settings_restored == True:
+        if self.settings_restored:
             self.settings_restored = False
             return
         menu_data['Screen Resolution'] = [menu_data.pop("Screen Width"), menu_data.pop("Screen Height")]

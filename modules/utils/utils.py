@@ -9,9 +9,9 @@ from fuzzywuzzy import fuzz
 from collections import Counter
 
 from langdetect import detect
-from typing import Union, Iterable, Tuple
+from typing import Union, List, Tuple, Iterable
 
-def normalize_weights(scores:Iterable[int]) -> np.ndarray:
+def normalize_weights(scores:List[int]) -> np.ndarray:
     """
     Get the weights from a list of scores, this dictates the sampling distribution to
      be used when picking questions
@@ -51,7 +51,7 @@ def add_special_chars(answer:str) -> str:
         answer = answer.replace(char + '_', special_chars[char])
     return answer
 
-def delete_list_indices(arr:Iterable, indices:Iterable[int]) -> Iterable:
+def delete_list_indices(arr:List, indices:List[int]) -> List:
     """Deletes a list of indices from a list
     :param arr: the list to be trimmed
     :param indices: the list of indices to be removed
@@ -82,7 +82,7 @@ def show_sampling_distribution(low_score=-10, high_score=10, n_samples=10000) ->
     plt.plot(range(len(counts)), [x[1] for x in counts])
     plt.show()
 
-def generate_id(digits:int, existing_ids:Iterable[int]) -> int:
+def generate_id(digits:int, existing_ids:List[int]) -> int:
     """
     Generate an id with a fixed number of digits
     :param digits: the number of digits for the id
@@ -119,7 +119,7 @@ def matching(answer:str, target:str) -> bool:
     # we'll use the fuzzywuzzy library to have some flexibility, but not too much
     return any([fuzz.ratio(answer, correct_answer) > 90 for correct_answer in correct_answers])
 
-def get_all_valid_answers(sentences:Union[str, Iterable[str]], choices:Iterable[Tuple[str, Iterable[str]]]=[]):
+def get_all_valid_answers(sentences:Union[str, List[str]], choices:List[Tuple[str, List[str]]]=[]):
     """
     Decomposes an answer to all possible implied answers
     :param sentences: a list of valid answers
@@ -173,7 +173,7 @@ def clean_text(text):
     text = re.sub(pattern, ' ', text)
     return text.strip()
 
-def detect_language(text:Union[Iterable, str], lang_mapping_file:str='resources/lang_codes.json'):
+def detect_language(text:Union[List, str], lang_mapping_file:str='resources/lang_codes.json'):
     """ Detects the language of a list of texts or a string of texts"""
     if isinstance(text, Iterable):
         text = ' '.join(text)
