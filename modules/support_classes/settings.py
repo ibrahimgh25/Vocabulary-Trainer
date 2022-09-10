@@ -1,24 +1,31 @@
 import json, os
 
 import warnings
-from modules.support_classes.pygame_menu import PygameMenu
+
 
 from pygame_menu.examples import create_example_window
 
 from typing import Optional
 from ..utils.default_settings import DEFAULT_SETTINGS
+from .pygame_menu import PygameMenu
 
 class SettingsHandler(dict):
     def __init__(self, resource_dir, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.path = f'{resource_dir}/settings.json'
         self._get_settings()
+        self.settings_menu = None
+        self.settings_restored = False
     
     def restore_default_settings(self):
         """ Restore all the settings to the default value"""
         self.save_settings(DEFAULT_SETTINGS)
         self._copy_settings_from_dict(DEFAULT_SETTINGS)
-    
+        if self.settings_menu is not None:
+            self.settings_menu._exit()
+            self.settings_restored = True
+
+
     def save_settings(self, settings:Optional[dict]=None):
         """
         Saves the settings to the appropriate files (can be used when the settings are changed by the user)
@@ -39,8 +46,8 @@ class SettingsHandler(dict):
         except FileNotFoundError:
             warnings.warn('Failed to recover settings file. Restoring to default settings.')
             self.restore_default_settings()
-    
-    def settings_menu(self, screen=None):
+
+    def display_options(self, screen=None):
         # FIXME: this still doesn't work, all the program will migrate to pygame_menu for menus
         if not screen:
             screen = create_example_window('Settings', self['Screen Resolution'])
@@ -48,24 +55,25 @@ class SettingsHandler(dict):
                                     (0.8, 0.7), 'Settings')
         
         w, h = self['Screen Resolution']
-        for prompt, default in [('Screen width: ', w), ('Screen height: ', h)]:
-            settings_menu.add_number_input(prompt, default=default)
+        for name, default in [('Screen Width', w), ('Screen Height', h)]:
+            settings_menu.add_number_input(name + '  ', default=default, id=name, maxchar=5)
         
         settings_menu.add.toggle_switch('Full Screen', self['Full Screen'],
-                                toggleswitch_id='full_screen')
+                                toggleswitch_id='Full Screen')
 
-        text_sections = [('Included Categories', self['Included Categories']),
-                        ('Excluded Categories', self['Excluded Categories']),
-                        ('Path to Excel File', self['Database']),
-                        ('Sheet name', self['Excel Sheet'])]
-        
+        text_sections = [(key, self[key]) for key in
+                ['Included Categories', 'Excluded Categories', 'Database', 'Excel Sheet']]
+
         for name, default_value in text_sections:
-            settings_menu.add_text_input(name, default_value)
+            settings_menu.add_text_input(name, default=default_value, input_id=name)
+        settings_menu.add_number_input('Number of Samples  ', id="Sample Size", default=self["Sample Size"])
 
         settings_menu.add.button('Open Database', self.open_db, button_id='open_db')  # Call function
         settings_menu.add.button('Restore original values', self.restore_default_settings)
 
-        settings_menu.mainloop(screen, bgcolor=(0, 0, 0))
+        self.settings_menu = settings_menu
+        self.settings_menu.mainloop(screen, bgcolor=(0, 0, 0))
+        self.update_settings_from_menu(self.settings_menu.get_input_data())
 
     def open_db(self):
         os.system("start EXCEL.EXE " + '"' + self['Database'] + '"')
@@ -73,3 +81,11 @@ class SettingsHandler(dict):
     def _copy_settings_from_dict(self, stg_dict):
         for key, value in stg_dict.items():
             self[key] = value
+
+    def update_settings_from_menu(self, menu_data):
+        if self.settings_restored == True:
+            self.settings_restored = False
+            return
+        menu_data['Screen Resolution'] = [menu_data.pop("Screen Width"), menu_data.pop("Screen Height")]
+        for key in menu_data.keys():
+            self[key] = menu_data[key]

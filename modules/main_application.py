@@ -48,21 +48,26 @@ class TrainerApp:
             f'Translate {self.source_lang} to {self.target_lang}':'Backward Translate',
             'Back':'Back'
             }
-        
+
         pygame.init()
+        self.home_img, self.bg = None, None
+
+        self.screen = pygame.display.set_mode(self.stg['Screen Resolution'])
         self.load_images()
+
         pygame.display.set_caption('Vocabulary Trainer')
 
         # Apply the filtering
         if len(self.stg['Sampled Words']) != self.stg['Sample Size']:
-            included_cats, excluded_cats= self.stg['Included Categories'], self.stg['Excluded Categories']
+            included_cats = [x.strip() for x in self.stg['Included Categories'].split(',')]
+            excluded_cats = [x.strip() for x in self.stg['Excluded Categories'].split(',')]
             n_samples = self.stg['Sample Size']
             self.db_handler.apply_filter('Forward Translate', n_samples, included_cats, excluded_cats)
             self.stg['Sampled Words'] = self.db_handler.used_ids
         elif len(self.stg['Sampled Words']) > 0:
             self.db_handler.used_ids = self.stg['Sampled Words']
 
-        self.mode = mode 
+        self.mode = mode
 
     def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         """
@@ -123,9 +128,7 @@ class TrainerApp:
 
         self.bg = pygame.image.load(f'{resource_dir}/background.jpg')
         self.bg = pygame.transform.scale(self.bg, img_size)
-
-        self.screen = pygame.display.set_mode(img_size)
-     
+        self.screen = pygame.display.set_mode(self.stg['Screen Resolution'])
     def start(self):
         """ This function displays the main menu until the user chooses a valid option
             :returns: the name of the pressed option
@@ -136,7 +139,7 @@ class TrainerApp:
         
         options = ['Practice',
                     'Show Scores',
-                    'Settings',
+                    'Options',
                     'Exit'
                     ]
         dimensions = {'rel_y':29, 'rel_x':5, 'rel_w':35, 'rel_h':10, 'rel_gap':1.6}
@@ -198,6 +201,7 @@ class TrainerApp:
                             try:
                                 self.user_answer += event.unicode
                             except:
+                                # TODO: Investigate what kind of errors are generated from above
                                 pass
                        
 
@@ -317,10 +321,11 @@ class TrainerApp:
                 else:
                     self.show_scores_summary(exercise)
             
-            elif option == 'Settings':
+            elif option == 'Options':
                 # This doesn't work for now
-                # self.stg.settings_menu(self.screen)
-                print('Under Development')
+                self.stg.display_options(self.screen)
+                self.load_images()
+
             elif option == 'Exit':
                 self.quit()
     
