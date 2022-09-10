@@ -161,11 +161,9 @@ class TrainerApp:
         """ Returns what option the user chooses on a given screen"""
         while True:
             event = pygame.event.wait()
-            self.handle_for_repeating_events(event)
-            if event.type == pygame.MOUSEBUTTONUP:
-                matching_area = get_matching_area(options)
-                if matching_area != '':
-                    return matching_area
+            matching_area = self.handle_for_repeating_events(event, options=options)
+            if matching_area and matching_area != '':
+                return matching_area
 
     def get_answer(self, question:str):
         """
@@ -184,26 +182,15 @@ class TrainerApp:
         # This area will be used to display the correct answer later
         self.target_area = items[-1][1]
         
-        while self.status == 'active':
-    
+        while True:
             # update the text of user input
             self.draw_text(self.user_answer, rect=items[1][1], bgcolor=(237,125,49))
             # TODO: If will still use this method, turn it into a function
             for event in pygame.event.get():
-                self.handle_for_repeating_events(event)
-                if event.type == pygame.KEYDOWN:
-                    if self.status == 'active':
-                        if event.key == pygame.K_BACKSPACE:
-                            self.user_answer = self.user_answer[:-1]
-                        elif event.key == pygame.K_RETURN:
-                            return self.user_answer
-                        else:
-                            try:
-                                self.user_answer += event.unicode
-                            except:
-                                # TODO: Investigate what kind of errors are generated from above
-                                pass
-                       
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    return self.user_answer
+                self.user_answer = self.handle_for_repeating_events(event, collected_text=self.user_answer)
+
 
     def display_question_results(self, correct_answer:str, answered_correctly:bool, question_idx:int, direction:str)->Optional[int]:
         """
@@ -231,40 +218,31 @@ class TrainerApp:
 
         while True:
             event = pygame.event.wait()
-            self.handle_for_repeating_events(event)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_SPACE, pygame.K_RETURN] :
                 return 1
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return 0
-            elif event.type == pygame.MOUSEBUTTONUP:
-                option = get_matching_area(options)
-                if option == 'Add Alternative Translation' and not answered_correctly:
-                    self.db_handler.add_alternative_translation(question_idx, self.user_answer, direction)
-                    self.draw_text(correct_answer, rect=self.target_area, bgcolor=(220, 220, 0))
-                elif option == 'Delete Entry':
-                    self.db_handler.delete_entry(question_idx)
-                    self.draw_text(correct_answer, rect=self.target_area, bgcolor=(0, 220, 220))
-                elif option == 'Edit Target':
-                    new_target = self.edit_target(correct_answer)
-                    self.db_handler.set_translation_target(question_idx, correct_answer, new_target)
-                    self.draw_text(new_target, rect=self.target_area, bgcolor=bgcolor)
+            option = self.handle_for_repeating_events(event, options=options)
+
+            if option == 'Add Alternative Translation' and not answered_correctly:
+                self.db_handler.add_alternative_translation(question_idx, self.user_answer, direction)
+                self.draw_text(correct_answer, rect=self.target_area, bgcolor=(220, 220, 0))
+            elif option == 'Delete Entry':
+                self.db_handler.delete_entry(question_idx)
+                self.draw_text(correct_answer, rect=self.target_area, bgcolor=(0, 220, 220))
+            elif option == 'Edit Target':
+                new_target = self.edit_target(correct_answer)
+                self.db_handler.set_translation_target(question_idx, correct_answer, new_target)
+                self.draw_text(new_target, rect=self.target_area, bgcolor=bgcolor)
     
-    def edit_target(self, target):
+    def edit_target(self, target:str) -> str:
         while True:
             self.draw_text(target, rect=self.target_area, bgcolor=(237,125,49))
             for event in pygame.event.get():
-                    self.handle_for_repeating_events(event)
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_BACKSPACE:
-                            target = target[:-1]
-                        elif event.key == pygame.K_RETURN:
-                            return target
-                        else:
-                            try:
-                                target += event.unicode
-                            except:
-                                pass
-    
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                    return target
+                target = self.handle_for_repeating_events(event, collected_text=target)
+
     def reset_screen(self, image):
         """
         Resets a given screen by displaying a new background image
@@ -277,14 +255,34 @@ class TrainerApp:
         self.screen.blit(image, (0,0))
         pygame.display.update()
     
-    def handle_for_repeating_events(self, event):
-        """ Monitors if the user wants to exist or resized the window.
-            :returns: True if the event was resizing, else False
+    def handle_for_repeating_events(self, event,
+                            collected_text: Optional[str] = None,
+                            options: Optional[Iterable[str]] = None) -> Optional[str]:
+        """
+            Monitors if the user wants to exist or resized the window
+            :param event: the event to be processed
+            :param collected_text: if it's not None, we're assumed to be waiting a typing event, and the results
+             are added to this string
+            :param options: the list of available options
+            :returns: if collected_text is not None, it returns the updated string after processing the event
+             else if options is not None, it returns the name of the matching option
+             else None is returned
         """
         if event.type == pygame.QUIT:
             self.quit()
-        return False
-            
+
+        if collected_text is not None:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    collected_text = collected_text[:-1]
+                else:
+                    # TODO: The try block was removed as it didn't seem to do anything, make sure that's true
+                    collected_text += event.unicode
+            return collected_text
+
+        if options is not None and event.type == pygame.MOUSEBUTTONUP:
+            return get_matching_area(options)
+
     def quit(self):
         """ Performs the necessary actions before the application exits"""
         # This is to avoid saving every time the app is tested while developing
