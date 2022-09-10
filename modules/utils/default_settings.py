@@ -11,6 +11,6 @@ DEFAULT_SETTINGS: final = {
     'Sampled Words':[],
     'bg_color':[0, 0, 0],
     'Full Screen':False,
-    'Included Categories':[],
-    'Excluded Categories':['phrase'],
+    'Included Categories':'',
+    'Excluded Categories':'phrase',
 }
