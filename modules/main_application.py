@@ -283,9 +283,6 @@ class TrainerApp:
         """
         if event.type == pygame.QUIT:
             self.quit()
-        if event.type == pygame.VIDEORESIZE:
-            self.stg['Screen Resolution'] = (event.w, event.h)
-            return True
         return False
             
     def quit(self):
@@ -426,9 +423,9 @@ class TrainerApp:
         im = pygame.transform.scale(im, rect[2:])
         self.screen.blit(im, rect[:2])
         pygame.display.update()
-        # FIXME: Fix a bug where the screen requires a click before going back
         while True:
             event = pygame.event.wait()
-            self.handle_for_repeating_events(event)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return
+            elif event.type == pygame.QUIT:
+                self.quit()
