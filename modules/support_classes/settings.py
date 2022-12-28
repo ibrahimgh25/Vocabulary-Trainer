@@ -43,7 +43,7 @@ class SettingsHandler(dict):
             with open(self.path, 'r') as f:
                 settings = json.load(f)
             self._copy_settings_from_dict(settings)
-        except FileNotFoundError:
+        except:
             warnings.warn('Failed to recover settings file. Restoring to default settings.')
             self.restore_default_settings()
 
@@ -52,7 +52,7 @@ class SettingsHandler(dict):
         if not screen:
             screen = create_example_window('Settings', self['Screen Resolution'])
         settings_menu = PygameMenu('Settings Menu', self['Screen Resolution'],
-                                    (0.8, 0.7), 'Settings')
+                                    (0.8, 0.7), 'Options')
         
         w, h = self['Screen Resolution']
         for name, default in [('Screen Width', w), ('Screen Height', h)]:

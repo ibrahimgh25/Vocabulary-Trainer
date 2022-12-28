@@ -7,6 +7,7 @@ from typing import List, Tuple, Optional
 
 from .support_classes import SettingsHandler, DatabaseHandler
 from .utils import rel2abs, detect_language
+from .exercises import TranslationExercise
 
 
 def get_matching_area(options:List[Tuple]):
@@ -35,6 +36,7 @@ class TrainerApp:
 
         self.resource_dir = resource_dir
         self.db_handler = DatabaseHandler(self.stg['Database'], self.stg['Excel Sheet'])
+        print(self.stg['Excel Sheet'])
 
         self.status = 'reset'
         self.user_answer = ''
@@ -58,7 +60,8 @@ class TrainerApp:
         pygame.display.set_caption('Vocabulary Trainer')
 
         # Apply the filtering
-        if len(self.stg['Sampled Words']) != self.stg['Sample Size']:
+        # FIXME: apply change for when the sheet changes
+        if len(self.stg['Sampled Words']) != self.stg['Sample Size'] or True:
             included_cats = [x.strip() for x in self.stg['Included Categories'].split(',')]
             excluded_cats = [x.strip() for x in self.stg['Excluded Categories'].split(',')]
             n_samples = self.stg['Sample Size']
@@ -68,6 +71,7 @@ class TrainerApp:
             self.db_handler.used_ids = self.stg['Sampled Words']
 
         self.mode = mode
+        self.quiz = None
 
     def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         """
@@ -229,6 +233,7 @@ class TrainerApp:
                 self.draw_text(correct_answer, rect=self.target_area, bgcolor=(220, 220, 0))
             elif option == 'Delete Entry':
                 self.db_handler.delete_entry(question_idx)
+                self.quiz.set_sampled_ids(self.db_handler.used_ids)
                 self.draw_text(correct_answer, rect=self.target_area, bgcolor=(0, 220, 220))
             elif option == 'Edit Target':
                 new_target = self.edit_target(correct_answer)
@@ -301,20 +306,24 @@ class TrainerApp:
                 if exercise == 'Back':
                     continue
                 while True:
-                    single_query = (exercise == 'Forward Translate') # We use single query if translating from target only
-                    entry = self.db_handler.sample_questions(exercise, single_query)
+                    self.set_quiz(exercise)
+                    entry = self.quiz.sample_question(self.db_handler)
                     answer = self.get_answer(entry['question'])
-                    result = self.db_handler.evaluate_answer(entry, answer, exercise)
+                    result = self.quiz.evaluate_answer(answer)
+
                     direction = exercise.split()[0]
                     value = self.display_question_results(entry['target'], result, entry['ID'], direction)
                     if value == 0:
+                        self.quiz.__del__()
+                        self.quiz = None
                         break
             elif option == 'Show Scores':
                 exercise = self.choose_exercise()
                 if exercise == 'Back':
                     continue
                 else:
-                    self.show_scores_summary(exercise)
+                    self.set_quiz(exercise)
+                    self.show_scores_summary()
             
             elif option == 'Options':
                 # This doesn't work for now
@@ -323,6 +332,14 @@ class TrainerApp:
 
             elif option == 'Exit':
                 self.quit()
+
+    def set_quiz(self, exercise):
+        direction = exercise.split()[0]
+        scores_path = self.get_scores_path(exercise)
+        self.quiz = TranslationExercise(scores_path, self.db_handler.used_ids, direction)
+
+    def get_scores_path(self, exercise):
+        return self.db_handler.get_scores_path(exercise)
     
     def calculate_rect_placements(self, item_names:List[str], dimensions:dict, horizontal:bool=False)->List[tuple]:
         """
@@ -356,7 +373,7 @@ class TrainerApp:
             current_y += gap_v
             current_x += gap_h
         return output
-    
+
     def add_items_to_screen(self, items:List[tuple], fgcolor=(19, 161, 14), bgcolor=(255, 255, 255))->None:
         """
         Adds a list of items to a screen
@@ -370,14 +387,15 @@ class TrainerApp:
             fsize = item[1][3]//2 # The font size will be half the rectangle height
             self.draw_text(item[0], rect=item[1], fsize=fsize, fgcolor=fgcolor, bgcolor=bgcolor)
     
-    def show_scores_summary(self, exercise:str):
+    def show_scores_summary(self):
         """ Displays a page with a summary of the scores for a particular exercise"""
         # TODO: LATER SHOULD BE CHANGED TO A BETTER IMPLEMENTATION
-        summary = self.db_handler.get_scores_summary(exercise)
+        summary = self.db_handler.get_scores_summary(self.quiz.scores)
         self.screen.fill((0, 0, 0))
         screen_w, screen_h = self.stg['Screen Resolution']
         font = pygame.font.Font(None, int(0.1*screen_h/2))
-        exercise = [i for i in self.exercises if self.exercises[i]==exercise][0]
+        # FIXME: make this flexible
+        exercise = "Translation Scores"
         # The title
         text = font.render(exercise, True, (19, 161, 14))
         text_rect = text.get_rect(center=(screen_w/2, screen_h/20))
