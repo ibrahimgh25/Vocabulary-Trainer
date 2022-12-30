@@ -152,6 +152,6 @@ cython_debug/
 #.idea/
 backup/
 playground.ipynb
-resources/scores
-resources/design_ideas.pptx
+resources/scores/**/*
+/resources/design_ideas.pptx
 .idea/
