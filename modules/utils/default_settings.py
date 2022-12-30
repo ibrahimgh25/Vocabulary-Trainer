@@ -13,4 +13,5 @@ DEFAULT_SETTINGS: final = {
     'Full Screen':False,
     'Included Categories':'',
     'Excluded Categories':'phrase',
+    'Source of Sampled Words':None
 }

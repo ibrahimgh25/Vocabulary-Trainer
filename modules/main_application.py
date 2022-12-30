@@ -36,14 +36,14 @@ class TrainerApp:
 
         self.resource_dir = resource_dir
         self.db_handler = DatabaseHandler(self.stg['Database'], self.stg['Excel Sheet'])
-        print(self.stg['Excel Sheet'])
 
         self.status = 'reset'
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
         # Detect the target and source languages, so they can be used in the exercise names
-        self.target_lang = detect_language(self.db_handler.lang_df['Word_s'])
-        self.source_lang = detect_language(self.db_handler.lang_df['Translation'])
+        print(self.db_handler.active_df.head())
+        self.target_lang = detect_language(self.db_handler.active_df['Word_s'])
+        self.source_lang = detect_language(self.db_handler.active_df['Translation'])
         # A dictionary to map the option name with the corresponding exercise
         self.exercises = {
             f'Translate {self.target_lang} to {self.source_lang}':'Forward Translate',
@@ -61,12 +61,12 @@ class TrainerApp:
 
         # Apply the filtering
         # FIXME: apply change for when the sheet changes
-        if len(self.stg['Sampled Words']) != self.stg['Sample Size'] or True:
+        if self.stg.sample_length_varied() or self.stg.sheet_changed():
             included_cats = [x.strip() for x in self.stg['Included Categories'].split(',')]
             excluded_cats = [x.strip() for x in self.stg['Excluded Categories'].split(',')]
             n_samples = self.stg['Sample Size']
             self.db_handler.apply_filter('Forward Translate', n_samples, included_cats, excluded_cats)
-            self.stg['Sampled Words'] = self.db_handler.used_ids
+            self.stg.set_sampled_words(self.db_handler.used_ids)
         elif len(self.stg['Sampled Words']) > 0:
             self.db_handler.used_ids = self.stg['Sampled Words']
 
@@ -292,7 +292,7 @@ class TrainerApp:
         """ Performs the necessary actions before the application exits"""
         # This is to avoid saving every time the app is tested while developing
         if self.mode != 'testing':
-            self.db_handler.save_database(self.stg['Database'], self.stg['Excel Sheet'])
+            self.db_handler.save_database(self.stg['Database'])
             self.stg.save_settings()
         pygame.quit()
         sys.exit()

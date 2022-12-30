@@ -1,7 +1,7 @@
 import json, os
 
 import warnings
-
+from json import JSONDecodeError
 
 from pygame_menu.examples import create_example_window
 
@@ -89,3 +89,13 @@ class SettingsHandler(dict):
         menu_data['Screen Resolution'] = [menu_data.pop("Screen Width"), menu_data.pop("Screen Height")]
         for key in menu_data.keys():
             self[key] = menu_data[key]
+
+    def sample_length_varied(self):
+        return len(self['Sampled Words']) != self['Sample Size']
+
+    def sheet_changed(self):
+        return self['Excel Sheet'] != self['Source of Sampled Words']
+
+    def set_sampled_words(self, sampled_words):
+        self['Sampled Words'] = list(sampled_words)
+        self['Source of Sampled Words'] = self['Excel Sheet']
