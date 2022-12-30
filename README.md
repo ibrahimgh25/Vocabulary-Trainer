@@ -1,5 +1,5 @@
 # Vocabulary Trainer
- In the process of learning a new language, I couldn't find a free tool for testing what words I memorized. I also looked through multiple open-source python projects on github (example: ), although they were great, they didn't do what I wanted. So I built this code. 
+ In the process of learning a new language, I couldn't find a free tool for testing what words I memorized. I also looked through multiple open-source python projects on github ([example](https://github.com/cocreators-ee/vocabulary-trainer/blob/main/data_processing/translate.py)), although they were great, they didn't do what I wanted. So I built this application. 
  ## Offered Features
  The tool has the following feature:
  ### Practicing Vocabulary
@@ -10,7 +10,7 @@
     <img height="500" src="resources/doc_images/exercise_example.png" width="800"/>
    </p>
  ### Sampling Questions
- - You can do exercises on small samples from the database to memorize words one batch at a time. 
+ - You can do exercises on a small sample from the database to memorize words one batch at a time. 
  - The tool focuses on questions you're answering wrong.
  
 ### Scores
