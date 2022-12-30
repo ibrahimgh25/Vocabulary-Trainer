@@ -5,14 +5,15 @@ import numpy as np
 from collections import Counter
 from ..utils import normalize_weights
 
+SCORES_DIR = "resources/scores"
 class ScoresHandler:
-    def __init__(self, scores_path, loaded_ids):
-        if not os.path.exists('resources/scores'):
-            os.mkdir('resources/scores')
+    def __init__(self, scores_file, loaded_ids):
+        if not os.path.exists(SCORES_DIR):
+            os.mkdir(SCORES_DIR)
 
         super().__init__()
 
-        self.scores_path = scores_path
+        self.scores_path = os.path.join(SCORES_DIR, scores_file)
         self.scores = self.load(loaded_ids)
 
     def load(self, loaded_ids:Iterable[str]) -> dict:
