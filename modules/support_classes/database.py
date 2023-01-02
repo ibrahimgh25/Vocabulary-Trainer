@@ -194,8 +194,7 @@ class DatabaseHandler:
         return entries[0]
 
     def load_all_sheets(self, excel_file):
-        # Load all sheets in the Excel file
+        """ Loads all the data in the sheets of an Excel files into memory"""
         xlsx = pd.ExcelFile(excel_file)
-        
         for sheet_name in xlsx.sheet_names:
             self.load_excel_sheet(excel_file, sheet_name)

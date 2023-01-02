@@ -1,4 +1,3 @@
-from typing import Tuple
 from abc import abstractmethod
 
 import numpy as np
@@ -34,5 +33,5 @@ class Exercise:
             self.sampled_ids = loaded_ids
 
 
-    def __del__(self):
+    def save_scores(self):
         self.scores.save()

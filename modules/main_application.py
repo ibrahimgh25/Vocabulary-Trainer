@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from typing import List, Tuple, Optional
 
+from .exercises.exercise import Exercise
 from .support_classes import SettingsHandler, DatabaseHandler
 from .utils import rel2abs, detect_language
 from .exercises import TranslationExercise
@@ -41,7 +42,6 @@ class TrainerApp:
         self.user_answer = ''
         self.target_area = (0, 0, 0, 0)
         # Detect the target and source languages, so they can be used in the exercise names
-        print(self.db_handler.active_df.head())
         self.target_lang = detect_language(self.db_handler.active_df['Word_s'])
         self.source_lang = detect_language(self.db_handler.active_df['Translation'])
         # A dictionary to map the option name with the corresponding exercise
@@ -71,7 +71,7 @@ class TrainerApp:
             self.db_handler.used_ids = self.stg['Sampled Words']
 
         self.mode = mode
-        self.quiz = None
+        self.quiz:Exercise = None
 
     def draw_text(self, msg, rect,  fgcolor=(255, 255, 255), fsize=26, bgcolor=(0, 0, 0)):
         """
@@ -314,7 +314,7 @@ class TrainerApp:
                     direction = exercise.split()[0]
                     value = self.display_question_results(entry['target'], result, entry['ID'], direction)
                     if value == 0:
-                        self.quiz.__del__()
+                        self.quiz.save_scores()
                         self.quiz = None
                         break
             elif option == 'Show Scores':
