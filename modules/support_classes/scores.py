@@ -5,15 +5,15 @@ import numpy as np
 from collections import Counter
 from ..utils import normalize_weights
 
-SCORES_DIR = "resources/scores"
+
 class ScoresHandler:
-    def __init__(self, scores_file, loaded_ids):
-        if not os.path.exists(SCORES_DIR):
-            os.mkdir(SCORES_DIR)
+    def __init__(self, scores_file, loaded_ids, scores_dir="resources/scores"):
+        if not os.path.exists(scores_dir):
+            os.mkdir(scores_dir)
 
         super().__init__()
 
-        self.scores_path = os.path.join(SCORES_DIR, scores_file)
+        self.scores_path = os.path.join(scores_dir, scores_file)
         self.scores = self.load(loaded_ids)
 
     def load(self, loaded_ids:Iterable[str]) -> dict:
@@ -35,7 +35,7 @@ class ScoresHandler:
         return scores
 
     def save(self) -> None:
-        """ Saves all the scores to their respective files"""
+        """ Saves the updated file back to the file they were loaded from"""
         with open(self.scores_path, 'w') as file_out:
             json.dump(self.scores, file_out)
 
@@ -63,7 +63,7 @@ class ScoresHandler:
 
     def remove_id(self, sample_id:Union[str, int]):
         """ Delete all the scores for a given id"""
-        self.scores.pop(str(id))
+        self.scores.pop(str(sample_id))
 
 
     def clean_unused_ids(self, used_ids):
